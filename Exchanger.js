@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     backgroundColor: '#fff',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
 
   /** Used to contain vertical column flexboxes for the currency display components
@@ -46,7 +46,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     alignItems: 'stretch',
   },
+  wideContainer: {
+    width: '85%',
+  },
 
+  bottomMargin: {
+    marginBottom: 10,
+  },
   /** Used to provide horizontal space between various column containers and components **/
   rowSpacer: {
     marginRight: 12,
@@ -87,6 +93,19 @@ const styles = StyleSheet.create({
     padding: 4,
   },
 
+  columnCenteredFlexBox: {
+    flex: 0,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  rowCenteredFlexBox: {
+    flex: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
   exchangeRowContainer: {
     flex: 0,
@@ -120,7 +139,6 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
 
-
   exchangeColumnContainer: {
     flex: 0,
     flexDirection: 'row',
@@ -152,9 +170,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
 
-  moneyText: {
+  webFont: {
     fontFamily: 'TitilliumWeb',
     fontSize: 32,
+  },
+  webFontSmall: {
+    fontFamily: 'TitilliumWeb',
+    fontSize: 24,
   },
   invisibleText: {
     color: 'rgba(255, 255, 255, 0)',
@@ -162,23 +184,34 @@ const styles = StyleSheet.create({
   greyText: {
     color: 'rgb(128, 128, 128)',
   },
+  white: {
+    color: 'white',
+  },
 
-  exchangeButton: {
+
+  button: {
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 6,
     marginLeft: 8,
     marginRight: 8,
+    borderWidth: 2,
+    borderColor: 'black',
+  },
+  square: {
     width: 54,
     height: 54,
-    // backgroundColor: '#cdcdd1',
   },
-  selectedButton: {
+  wide: {
+    flexDirection: 'row',
+    flex: 1,
+    // width: '37.5%',
+    height: 54,
+  },
+  whiteBackground: {
     backgroundColor: 'white',
-    borderColor: 'black',
-    borderWidth: 2,
   },
-  unselectedButton: {
+  blackBackground: {
     backgroundColor: 'black',
   },
   exchangeButtonInsideContainer: {
@@ -276,9 +309,15 @@ export default class Exchanger extends Component {
       /** The price of a single unit of cryptocurrency, in dollars **/
       coinPrice: 0,
 
+      /** If true, then cryptocurrency is being bought, otherwise it is being sold.
+          If null, no exchange mode has been decided by the user yet **/
+      exchangeMode: null,
+
       /** If true, then the crytocurrency is being bought or sold in the exchange
           box. If false, the dollar is. **/
       coinExchangeMode: true,
+
+      inputText: "",
 
       /** Text that is contained within the input box next to the buy button **/
       buyInputText: "",
@@ -288,7 +327,7 @@ export default class Exchanger extends Component {
 
       /** Object which holds the data used in the chart. Is constructed by
           specific subclasses when loaded **/
-      chartData: "NaN",
+      chartData: null,
 
       hideChart: false,
 
@@ -425,7 +464,7 @@ export default class Exchanger extends Component {
   }
 
   getCoin() {
-    return round(this.state.coin, 7);
+    return round(this.state.coin, 5);
   }
 
   getDollars() {
@@ -433,37 +472,61 @@ export default class Exchanger extends Component {
   }
 
   getDollarExchangeValue() {
-    var buyInputValue = parseFloat(this.state.buyInputText);
-    var sellInputValue = parseFloat(this.state.sellInputText);
-    if(!isNaN(buyInputValue)) {
+    var inputValue = parseFloat(this.state.inputText);
+    if(isNaN(inputValue))
+      return 0.0;
+
+    // if the user is buying coins
+    if(this.state.exchangeMode) {
+
+      // and the user is buying them in coins
       if(this.state.coinExchangeMode) {
-        return 0 - (buyInputValue * this.state.coinPrice);
-      } else {
-        return buyInputValue;
+        return 0 - (inputValue * this.state.coinPrice);
       }
-    } else if(!isNaN(sellInputValue)) {
+      // and the user is buying them in dollars worth
+      else {
+        return 0 - inputValue;
+      }
+    }
+    // if the user is selling coins
+    else {
+      // and the user is selling them in coins
       if(this.state.coinExchangeMode) {
-        return 0 + (sellInputValue * this.state.coinPrice);
-      } else {
-        return 0 - sellInputValue;
+        return 0 + (inputValue * this.state.coinPrice);
+      }
+      // and the user is selling them in dollars worth
+      else {
+        return 0 + inputValue;
       }
     }
   }
 
   getCryptoExchangeValue()  {
-    var buyInputValue = parseFloat(this.state.buyInputText);
-    var sellInputValue = parseFloat(this.state.sellInputText);
-    if(!isNaN(buyInputValue)) {
+    var inputValue = parseFloat(this.state.inputText);
+    if(isNaN(inputValue))
+      return 0.0;
+
+    // if the user is buying coins
+    if(this.state.exchangeMode) {
+
+      // and the user is buying them in coins
       if(this.state.coinExchangeMode) {
-        return buyInputValue;
-      } else {
-        return 0 - (buyInputValue / this.state.coinPrice);
+        return inputValue;
       }
-    } else if(!isNaN(sellInputValue)) {
+      // and the user is buying them in dollars worth
+      else {
+        return 0 + (inputValue / this.state.coinPrice);
+      }
+    }
+    // if the user is selling coins
+    else {
+      // and the user is selling them in coins
       if(this.state.coinExchangeMode) {
-        return 0 - sellInputValue;
-      } else {
-        return (sellInputValue / this.state.coinPrice);
+        return 0 - inputValue;
+      }
+      // and the user is selling them in dollars worth
+      else {
+        return 0 - (inputValue / this.state.coinPrice);
       }
     }
   }
@@ -475,17 +538,17 @@ export default class Exchanger extends Component {
   }
 
   getCurrencyExchangeBox() {
-    if(!isNaN(parseFloat(this.state.buyInputText)) || !isNaN(parseFloat(this.state.sellInputText))) {
-      var dollarExchangeValue = round(this.getDollarExchangeValue(), 7);
-      var cryptoExchangeValue = round(this.getCryptoExchangeValue(), 7);
+    if(this.state.exchangeMode != null) {
+      var dollarExchangeValue = round(this.getDollarExchangeValue(), 5);
+      var cryptoExchangeValue = round(this.getCryptoExchangeValue(), 5);
       dollarExchangeValue = (dollarExchangeValue > 0 ? " + ":" - ") + Math.abs(dollarExchangeValue);
       cryptoExchangeValue = (cryptoExchangeValue > 0 ? " + ":" - ") + Math.abs(cryptoExchangeValue);
       return (
         <View style={styles.leftAlignedRowContainer}>
           <View style={styles.valuesColumn}>
-            <Text style={[styles.moneyText, styles.greyText]}>{dollarExchangeValue}</Text>
-            <Text style={[styles.moneyText, styles.greyText]}>{cryptoExchangeValue}</Text>
-            <Text style={[styles.moneyText, styles.invisibleText]}>invisible-Text</Text>
+            <Text style={[styles.webFont, styles.greyText]}>{dollarExchangeValue}</Text>
+            <Text style={[styles.webFont, styles.greyText]}>{cryptoExchangeValue}</Text>
+            <Text style={[styles.webFont, styles.invisibleText]}>invisible-Text</Text>
           </View>
         </View>
       );
@@ -495,18 +558,130 @@ export default class Exchanger extends Component {
 
   getDollarButtonStyle() {
     if(this.state.coinExchangeMode) {
-      return [styles.exchangeButton, styles.unselectedButton];
+      return [styles.button, styles.square, styles.whiteBackground];
     } else {
-      return [styles.exchangeButton, styles.selectedButton];
+      return [styles.button, styles.square, styles.blackBackground];
     }
   }
 
   getCoinButtonStyle() {
     if(!this.state.coinExchangeMode) {
-      return [styles.exchangeButton, styles.unselectedButton];
+      return [styles.button, styles.square, styles.whiteBackground];
     } else {
-      return [styles.exchangeButton, styles.selectedButton];
+      return [styles.button, styles.square, styles.blackBackground];
     }
+  }
+
+  getExchangeBox() {
+    if(this.state.exchangeMode === null) {
+      return (
+        <View style={ [styles.columnCenteredFlexBox, styles.wideContainer] }>
+
+          <View style={ styles.rowCenteredFlexBox }>
+            <TouchableOpacity
+              style={ [styles.button, styles.wide, styles.blackBackground] }
+              onPress={() => this.setExchangeMode(true)} >
+              <Text style={ [styles.webFontSmall, styles.white] }>buy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={ [styles.button, styles.wide, styles.blackBackground] }
+              onPress={ () => this.setExchangeMode(false) } >
+              <Text style={ [styles.webFontSmall, styles.white] }>sell</Text>
+            </TouchableOpacity>
+          </View>
+
+        </View>
+      );
+    } else {
+      return (
+        <View style={ [styles.columnCenteredFlexBox, styles.wideContainer] }>
+
+          <View style={ [styles.rowCenteredFlexBox, styles.bottomMargin] }>
+            <TouchableOpacity
+              style={ this.getDollarButtonStyle() }
+              onPress={() => this.setCoinExchangeMode(false)}>
+              <View style={ styles.exchangeButtonInsideContainer }>
+              <Feather name="dollar-sign" size={32} color={this.state.coinExchangeMode?'black':'white'} />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={ this.getCoinButtonStyle() }
+              onPress={() => this.setCoinExchangeMode(true)}>
+              {this.getCoinIcon(this.state.coinExchangeMode?'white':'black')}
+            </TouchableOpacity>
+          </View>
+
+          <View style={ styles.rowCenteredFlexBox }>
+            <TouchableOpacity
+              style={ [styles.button, styles.square, styles.blackBackground] }
+              onPress={() => {
+                this.exchangeCurrency();
+                this.setExchangeMode(null);
+              }} >
+              <Text style={ [styles.webFontSmall, styles.white] }>
+                {this.state.exchangeMode?<Feather name="plus" size={36} color="white" />:<Feather name="minus" size={36} color="white" />}
+              </Text>
+            </TouchableOpacity>
+            <TextInput
+              style={[styles.textInputMargin, styles.webFont, styles.wide]}
+              keyboardType="decimal-pad"
+              onChangeText={text => this.updateInputText(text)}
+              placeholder="0"
+              value={this.state.inputText} />
+          </View>
+
+        </View>
+      );
+    }
+
+    // if(this.state.exchangeMode) {
+    //   return(
+    //     <View style={ [styles.columnCenteredFlexBox, styles.wideContainer] }>
+    //
+    //       <View style={ styles.rowCenteredFlexBox }>
+    //         <TouchableOpacity
+    //           style={ [styles.button, styles.square, styles.blackBackground] }
+    //           onPress={() => {
+    //             this.exchangeCurrency();
+    //             this.setExchangeMode(null);
+    //           }} >
+    //           <Text style={ [styles.webFontSmall, styles.white] }>+</Text>
+    //         </TouchableOpacity>
+    //         <TextInput
+    //           style={[styles.textInputMargin, styles.webFont, styles.wide]}
+    //           keyboardType="decimal-pad"
+    //           onChangeText={text => this.updateInputText(text)}
+    //           placeholder="0"
+    //           value={this.state.inputText} />
+    //       </View>
+    //
+    //     </View>
+    //   );
+    // } else {
+    //   return(
+    //     <View style={ [styles.columnCenteredFlexBox, styles.wideContainer] }>
+    //
+    //       <View style={ styles.rowCenteredFlexBox }>
+    //         <TouchableOpacity
+    //           style={ [styles.button, styles.square, styles.blackBackground] }
+    //           onPress={() => {
+    //             this.exchangeCurrency();
+    //             this.setExchangeMode(null);
+    //           }} >
+    //           <Text style={ [styles.webFontSmall, styles.white] }>-</Text>
+    //         </TouchableOpacity>
+    //         <TextInput
+    //           style={[styles.textInputMargin, styles.webFont, styles.wide]}
+    //           keyboardType="decimal-pad"
+    //           onChangeText={text => this.updateInputText(text)}
+    //           placeholder="0"
+    //           value={this.state.inputText} />
+    //       </View>
+    //
+    //     </View>
+    //   );
+      // }
+
   }
 
 
@@ -546,6 +721,10 @@ export default class Exchanger extends Component {
     });
   }
 
+  setExchangeMode(inMode) {
+    this.setState({exchangeMode: inMode})
+  }
+
   setCoinExchangeMode(inMode) {
     this.setState({coinExchangeMode: inMode});
   }
@@ -556,6 +735,10 @@ export default class Exchanger extends Component {
     } else {
       this.setState({coinExchangeMode: true});
     }
+  }
+
+  updateInputText(inStr) {
+    this.setState({inputText: inStr});
   }
 
   updateBuyInputText (inStr) {
@@ -574,54 +757,19 @@ export default class Exchanger extends Component {
       the respective currency (dollars or coins, based on the exchange mode)
       is bought, otherwise it is sold, using the respective input text values
       as the quantity of currency being bought or sold. **/
-  exchangeCurrency (buy) {
+  exchangeCurrency () {
 
-    /** Parse the input text for the exchange amount and exit if it is not a number. **/
-    var exchangeAmount = ( buy ? parseFloat(this.state.buyInputText) : parseFloat(this.state.sellInputText) );
-    if(isNaN(exchangeAmount))
-      return;
-
-    console.log("dollar: " + dollars +
-                "\ncoin: " + this.state.coin);
-
-    var newDollarAmount;
-    var newCoinAmount;
-    if(this.getCoinExchangeMode() == true) {
-      if(buy) {
-        newDollarAmount = dollars - (exchangeAmount * this.state.coinPrice);
-        newCoinAmount = this.state.coin + exchangeAmount;
-      } else {
-        newDollarAmount = dollars + (exchangeAmount * this.state.coinPrice);
-        newCoinAmount = this.state.coin - exchangeAmount;
-      }
-    } else {
-      if(buy) {
-        newDollarAmount = dollars + exchangeAmount;
-        newCoinAmount = this.state.coin - (exchangeAmount / this.state.coinPrice);
-      } else {
-        newDollarAmount = dollars - exchangeAmount;
-        newCoinAmount = this.state.coin + (exchangeAmount / this.state.coinPrice);
-      }
-    }
-
-    console.log("exchangeAmount: " + exchangeAmount +
-                "\nnewDollarAmount: " + newDollarAmount +
-                "\nnewCoinAmount: " + newCoinAmount);
-
-    if(newDollarAmount < 0 || newCoinAmount < 0
-      || isNaN(newDollarAmount) || isNaN(newCoinAmount))
-      return;
+    var newCoinAmount = this.state.coin + this.getCryptoExchangeValue();
+    var newDollarAmount = dollars + this.getDollarExchangeValue();
 
     dollars = newDollarAmount;
-    this.setState({
-      coin: newCoinAmount,
-      buyInputText: "",
-      sellInputText: "",
-    });
+    this.setCoin(newCoinAmount);
 
     this.saveValuesToFile(newDollarAmount, newCoinAmount)
       .catch((error) => console.error(error))
       .finally(() => console.log("Values saved successfully."));
+
+    this.updateInputText("");
 
     forceRender();
   }
@@ -704,7 +852,7 @@ export default class Exchanger extends Component {
           { this.getLineChart() }
 
           {/** Row containing value container and hypothetical value container **/}
-          <View style={[styles.leftAlignedRowContainer, styles.subcontainerSpacer]}>
+          <View style={[styles.leftAlignedRowContainer, styles.subcontainerSpacer, styles.wideContainer]}>
             {/* currency display elements */}
             <View style={styles.leftAlignedRowContainer}>
               <View style={[styles.iconsColumn, styles.rowSpacer]}>
@@ -715,9 +863,9 @@ export default class Exchanger extends Component {
               </View>
 
               <View style={styles.valuesColumn}>
-                <Text style={styles.moneyText}>{this.getDollars()}</Text>
-                <Text style={styles.moneyText}>{this.getCoin()}</Text>
-                <Text style={styles.moneyText}>{this.state.coinPrice}</Text>
+                <Text style={styles.webFont}>{this.getDollars()}</Text>
+                <Text style={styles.webFont}>{this.getCoin()}</Text>
+                <Text style={styles.webFont}>{this.state.coinPrice}</Text>
               </View>
             </View>
 
@@ -730,87 +878,7 @@ export default class Exchanger extends Component {
 
           {/* currency exchange elements */}
 
-
-          <View style={ [styles.exchangeRowContainer, styles.subcontainerSpacer] }>
-
-            {/** Row 1 **/}
-            <View style={styles.exchangeComponentRow}>
-
-              {/** Subrow-Left **/}
-              <View style={[styles.exchangeComponentSubRow, styles.rightAlignedSubRow]}>
-                <TouchableOpacity
-                  style={ this.getDollarButtonStyle() }
-                  onPress={() => this.setCoinExchangeMode(false)}>
-                  <View style={ styles.exchangeButtonInsideContainer }>
-                  <Feather name="dollar-sign" size={32} color={this.state.coinExchangeMode?'white':'black'} />
-                  </View>
-                </TouchableOpacity>
-              </View>
-
-              {/** Subrow-Right **/}
-              <View style={[styles.exchangeComponentSubRow, styles.leftAlignedSubRow]}>
-                <TouchableOpacity
-                  style={ this.getCoinButtonStyle() }
-                  onPress={() => this.setCoinExchangeMode(true)}>
-                  {this.getCoinIcon(this.state.coinExchangeMode?'black':'white')}
-                </TouchableOpacity>
-              </View>
-
-            </View>
-
-            {/** Row 2 **/}
-            <View style={styles.exchangeComponentRow}>
-
-              {/** Subrow-Left **/}
-              <View style={[styles.exchangeComponentSubRow, styles.rightAlignedSubRow]}>
-                <TouchableOpacity
-                  style={[styles.rowSpacer, styles.exchangeButton, styles.unselectedButton]}
-                  onPress={() => this.exchangeCurrency(true)} >
-                  <Text style={styles.buttonText}>buy</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/** Subrow-Right **/}
-              <View style={[styles.exchangeComponentSubRow, styles.leftAlignedSubRow]}>
-                <TextInput
-                  style={[styles.textInputMargin, styles.moneyText]}
-                  keyboardType="decimal-pad"
-                  onChangeText={text => this.updateBuyInputText(text)}
-                  onFocus={() => this.setHideChart(true)}
-                  onEndEditing={() => this.setHideChart(false)}
-                  placeholder="0"
-                  value={this.state.buyInputText} />
-              </View>
-
-            </View>
-
-            {/** Row 3 **/}
-            <View style={styles.exchangeComponentRow}>
-
-              {/** Subrow-Left **/}
-              <View style={[styles.exchangeComponentSubRow, styles.rightAlignedSubRow]}>
-                <TouchableOpacity
-                  style={[styles.rowSpacer, styles.exchangeButton, styles.unselectedButton]}
-                  onPress={() => this.exchangeCurrency(false)} >
-                  <Text style={styles.buttonText}>sell</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/** Subrow-Right **/}
-              <View style={[styles.exchangeComponentSubRow, styles.leftAlignedSubRow]}>
-                <TextInput
-                  style={[styles.textInputMargin, styles.moneyText]}
-                  keyboardType="decimal-pad"
-                  onChangeText={text => this.updateSellInputText(text)}
-                  onFocus={() => this.setHideChart(true)}
-                  onEndEditing={() => this.setHideChart(false)}
-                  placeholder="0"
-                  value={this.state.sellInputText} />
-              </View>
-
-            </View>
-
-          </View>
+          {this.getExchangeBox()}
 
         </View>
       );
