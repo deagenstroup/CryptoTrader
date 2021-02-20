@@ -4,12 +4,17 @@ import {
   StyleSheet,
   View,
   Text,
-  TouchableOpacity
+  TouchableOpacity,
+  Dimensions,
 } from 'react-native';
 
 import AppLoading from 'expo-app-loading';
 import * as FileSystem from 'expo-file-system';
 import { Feather, MaterialIcons, Foundation } from '@expo/vector-icons';
+
+import { PieChart } from 'react-native-chart-kit';
+
+import { getCryptoPercentageDataArray } from "./Exchanger.js";
 
 // import Dialog, { DialogTitle, DialogContent, DialogFooter, DialogButton } from 'react-native-popup-dialog';
 
@@ -132,6 +137,8 @@ export function updateNetValues(inCryptoValue, inDollarValue) {
   profileComponent.forceUpdate();
 }
 
+var colorsArray = ['rgba(131, 167, 234, 1)', '#F00', 'rgb(0, 0, 255)', 'rgb(155, 0, 0)'];
+
 export default class Profile extends Component {
 
   constructor(props) {
@@ -188,6 +195,20 @@ export default class Profile extends Component {
     var todaysDate = new Date();
     var timeDifference = todaysDate.getTime() - this.getDateCreated().getTime();
     return Math.trunc(timeDifference / (1000 * 3600 * 24));
+  }
+
+  getPieChartData() {
+    var data = getCryptoPercentageDataArray();
+    var colorGradient = 255 / data.length;
+    var color = 0;
+    for(var i = 0; i < data.length; i++) {
+      data[i].color = "rgb(" + color + "," + color + "," + color + ")";
+      data[i].legendFontSize = 15;
+      data[i].legendFontColor = "black";
+      color = Math.trunc(color + colorGradient);
+      console.log(data[i]);
+    }
+    return data;
   }
 
   getResetDialog() {
@@ -333,6 +354,30 @@ export default class Profile extends Component {
             <Text style={ styles.statsText } >profile age: {this.getProfileAge()} days</Text>
             <Text style={ styles.statsText } >net worth: ${round(this.state.currentTotalNetValue, 2)}</Text>**/}
           </View>
+
+          <PieChart
+            data={this.getPieChartData()}
+            width={Dimensions.get('window').width - 16}
+            height={220}
+            chartConfig={{
+              backgroundColor: '#1cc910',
+              backgroundGradientFrom: '#eff3ff',
+              backgroundGradientTo: '#efefef',
+              decimalPlaces: 2,
+              color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              style: {
+                borderRadius: 16,
+              },
+            }}
+            style={{
+              marginVertical: 8,
+              borderRadius: 16,
+            }}
+            accessor="population"
+            backgroundColor="transparent"
+            paddingLeft="15"
+            //absolute //for the absolute number remove if you want percentage
+          />
 
           <View style={ [styles.buttonContainer, styles.subcontainerSpacer] } >
 

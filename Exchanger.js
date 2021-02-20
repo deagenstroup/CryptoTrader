@@ -30,7 +30,7 @@ import { updateNetValues } from './Profile.js';
 
 const styles = StyleSheet.create({
 
-  screenContainer: {
+  largeColumnBox: {
     flex: 1,
     flexDirection: 'column',
     backgroundColor: '#fff',
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
   },
   webFontSmall: {
-    fontFamily: 'TitilliumWeb',
+    fontFamily: 'Aldrich',
     fontSize: 24,
   },
   invisibleText: {
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   },
 
   buttonText: {
-    fontFamily: 'Aldrich',
+    fontFamily: 'HeeboRegular',
     fontSize: 24,
     color: 'white',
   },
@@ -239,18 +239,9 @@ export function round(value, decimals) {
   return 0;
 }
 
-export function getChartLabels() {
-  var date = new Date();
-  var labelArray = ["1", "2", "3", "4", "5", "6", "7"];
-  var i;
-  for(i = 6; i >= 0; i = i - 1) {
-    var label = "" + (date.getMonth() + 1) + "/" + date.getDate();
-    console.log(i + ": " + label);
-    labelArray[i] = "" + (date.getMonth() + 1) + "/" + date.getDate();
-    date = new Date(date.getTime() - 86400000);
-  }
-  return labelArray;
-}
+
+
+var graphTimeframe = "7d";
 
 /* The amount of dollars the user has, which is the same across all exchanger
    components */
@@ -265,6 +256,18 @@ function forceRender() {
   for(var i = 0; i < exchangersArray.length; i++) {
     exchangersArray[i].forceUpdate();
   }
+}
+
+export function getCryptoPercentageDataArray() {
+  var coinArray = [];
+  for(var i = 0; i < exchangersArray.length; i++) {
+    var coinDollarValue = exchangersArray[i].getCoin() * exchangersArray[i].getCoinPrice();
+    coinArray.push({
+      name: exchangersArray[i].getCoinName(),
+      population: coinDollarValue,
+    });
+  }
+  return coinArray;
 }
 
 export function getTotalCurrentNetValue() {
@@ -282,6 +285,62 @@ export function getTotalCryptoValue() {
 
 export function getDollars() {
   return dollars;
+}
+
+export function updateGraphTimeFrame(inTimeFrame) {
+  graphTimeframe = inTimeFrame;
+
+  for(var i = 0; i < exchangersArray.length; i++) {
+    exchangersArray[i].fetchCoinData();
+  }
+}
+
+export function get7DChartLabels() {
+  var date = new Date();
+  var labelArray = ["1", "2", "3", "4", "5", "6", "7"];
+  var i;
+  for(i = 6; i >= 0; i = i - 1) {
+    var label = "" + (date.getMonth() + 1) + "/" + date.getDate();
+    console.log(i + ": " + label);
+    labelArray[i] = "" + (date.getMonth() + 1) + "/" + date.getDate();
+    date = new Date(date.getTime() - 86400000);
+  }
+  return labelArray;
+}
+
+function get24HChartLabels() {
+  var date = new Date();
+  var labelArray = ["1", "2", "3", "4", "5", "6", "7"];
+  var i;
+  for(i = 6; i >= 0; i = i - 1) {
+    var label;
+    var hours = date.getHours();
+
+    if(hours === 12) {
+      label = "12PM";
+    } else if(hours === 0) {
+      label = "12AM";
+    } else if(hours > 12) {
+      label = "" + (hours-12) + "PM";
+    } else {
+      label = hours + "AM";
+    }
+
+    labelArray[i] = label;
+    date = new Date(date.getTime() - 3600000*4);
+  }
+  return labelArray;
+}
+
+function get1MChartLabels() {
+  var date = new Date();
+  var labelArray = ["1", "2", "3", "4", "5", "6", "7"];
+  var i;
+  for(i = 6; i >= 0; i = i - 1) {
+    labelArray[i] = "" + (date.getMonth() + 1) + "/" + date.getDate();
+    date = new Date(date.getTime() - 86400000*4);
+  }
+  return labelArray;
 }
 
 /** An abstract component which is used on a screen to exchange a cryptocurrency **/
@@ -368,36 +427,105 @@ export default class Exchanger extends Component {
       price of whichever cryptocurrency the class represents. **/
   fetchCoinPrice() {}
 
-  fetchCoinDataFromURL(inURL) {
-    fetch(inURL)
+  fetchCoinDataWithName(coinName) {
+    var url = "https://api.coingecko.com/api/v3/coins/" + coinName + "/market_chart?vs_currency=usd&";
+
+    if(graphTimeframe === "7d") {
+      url = url + "days=7&interval=daily";
+    } else if(graphTimeframe === "24h") {
+      url = url + "&days=1&interval=hourly";
+    } else if(graphTimeframe === "1m") {
+      url = url + "&days=1&interval=hourly";
+    }
+
+    fetch(url)
       .then((response) => response.json())
       .then((json) => {
-        var chartLabels = getChartLabels();
-        var chartDataArray = [10, 12, 15, 9, 8, 21, 19];
-
-        for(var i = 0; i < 7; i++) {
-          var num = round(json.prices[i][1], 2);
-          // console.log("num: " + num);
-          // var num = round( json.prices[i][1], 2);
-          chartDataArray[i] = num;
+        if(graphTimeframe === "7d") {
+          this.parse7DCoinData(json);
+        } else if(graphTimeframe === "24h") {
+          this.parse24HCoinData(json);
+        } else if(graphTimeframe === "1m") {
+          this.parse1MCoinData(json);
         }
-
-        var chartData = {
-          labels: chartLabels,
-          datasets: [
-            {
-              data: chartDataArray,
-            }
-          ],
-        };
-
-        this.setChartData(chartData);
       })
       .catch((error) => console.error(error))
       .finally(() => {
         this.setState({isChartDataLoaded: true});
         this.updateProfileValues();
       });
+  }
+
+  parse7DCoinData(json) {
+    var chartLabels = get7DChartLabels();
+    var chartDataArray = [10, 12, 15, 9, 8, 21, 19];
+
+    for(var i = 0; i < 7; i++) {
+      var num = round(json.prices[i][1], 2);
+      // console.log("num: " + num);
+      // var num = round( json.prices[i][1], 2);
+      chartDataArray[i] = num;
+    }
+
+    var chartData = {
+      labels: chartLabels,
+      datasets: [
+        {
+          data: chartDataArray,
+        }
+      ],
+    };
+
+    this.setChartData(chartData);
+  }
+
+  parse24HCoinData(json) {
+    var chartLabels = get24HChartLabels();
+    var chartDataArray = [ 1, 2, 3, 4, 5, 6, 7];//, 7, 8, 9, 10, 11, 12 ];
+
+    var time = Date.now();
+    var j = chartDataArray.length - 1;
+    for(var i = json.prices.length - 1; i >= 0 && j >= 0; i--) {
+      var jsonTime = json.prices[i][0];
+      if(jsonTime > (time - 360000*2) && jsonTime < (time + 360000*2)) {
+        chartDataArray[j] = json.prices[i][1];
+        j--;
+        time = time - 3600000*4;
+      }
+    }
+
+    var chartData = {
+      labels: chartLabels,
+      datasets: [
+        {
+          data: chartDataArray,
+        }
+      ],
+    };
+
+    this.setChartData(chartData);
+  }
+
+  parse1MCoinData(json) {
+    var chartLabels = get1MChartLabels();
+    var chartDataArray = [ 1, 2, 3, 4, 5, 6, 7];//, 7, 8, 9, 10, 11, 12 ];
+
+    var j = chartDataArray.length - 1;
+    for(var i = json.prices.length - 1; i >= 0 && j >= 0; i -= 4) {
+      chartDataArray[j] = json.prices[i][1];
+      j--;
+    }
+
+    var chartData = {
+      labels: chartLabels,
+      datasets: [
+        {
+          data: chartDataArray,
+        }
+      ],
+    };
+
+    this.setChartData(chartData);
   }
 
 
@@ -465,6 +593,10 @@ export default class Exchanger extends Component {
 
   getCoin() {
     return round(this.state.coin, 5);
+  }
+
+  getCoinPrice() {
+    return this.state.coinPrice;
   }
 
   getDollars() {
@@ -575,7 +707,7 @@ export default class Exchanger extends Component {
   getExchangeBox() {
     if(this.state.exchangeMode === null) {
       return (
-        <View style={ [styles.columnCenteredFlexBox, styles.wideContainer] }>
+        <View style={ [styles.columnCenteredFlexBox, styles.wideContainer, styles.bottomMargin] }>
 
           <View style={ styles.rowCenteredFlexBox }>
             <TouchableOpacity
@@ -594,7 +726,7 @@ export default class Exchanger extends Component {
       );
     } else {
       return (
-        <View style={ [styles.columnCenteredFlexBox, styles.wideContainer] }>
+        <View style={ [styles.columnCenteredFlexBox, styles.wideContainer, styles.bottomMargin] }>
 
           <View style={ [styles.rowCenteredFlexBox, styles.bottomMargin] }>
             <TouchableOpacity
@@ -847,7 +979,7 @@ export default class Exchanger extends Component {
       return <AppLoading />;
     } else {
       return (
-        <View style={styles.screenContainer}>
+        <View style={styles.largeColumnBox}>
 
           { this.getLineChart() }
 

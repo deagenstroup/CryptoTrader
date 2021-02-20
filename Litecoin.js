@@ -50,7 +50,7 @@ export class LitecoinExchanger extends Exchanger {
   }
 
   fetchCoinData() {
-    this.fetchCoinDataFromURL("https://api.coingecko.com/api/v3/coins/litecoin/market_chart?vs_currency=usd&days=7&interval=daily");
+    this.fetchCoinDataWithName(this.getCoinName());
   }
 
 }

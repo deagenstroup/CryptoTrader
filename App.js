@@ -22,11 +22,12 @@ import { BitcoinExchanger } from "./Bitcoin.js";
 import { EthereumExchanger } from "./Ethereum.js";
 import { LitecoinExchanger } from "./Litecoin.js";
 import { MoneroExchanger } from "./Monero.js";
+import { ExchangerScreen } from "./ExchangerScreen.js";
 import Profile from "./Profile.js";
 
 const styles = StyleSheet.create({
   screenHeaderFont : {
-    fontFamily: "normal",
+    fontFamily: "Aldrich",
     fontSize: 24,
   },
   labelFont: {
@@ -76,51 +77,31 @@ const NavDrawer = () => {
         labelStyle: styles.labelFont,
       }}
       screenOptions={{
-        headerTitleStyle: styles.screenHeaderFont
+        headerTitleStyle: styles.screenHeaderFont,
+        headerShown: true,
       }}
-      drawerStyle={{backgroundColor: '#ffffff'}}
+      drawerStyle={{
+        backgroundColor: '#ffffff',
+        width: 200,
+      }}
       >
 
         <Drawer.Screen
           name="profile-screen"
           component={Profile}
           options={{
-            drawerLabel: "Profile"
+            drawerLabel: "Profile",
+            title: "Profile",
           }}
           />
 
         <Drawer.Screen
-          name="bitcoin-screen"
-          component={BitcoinExchanger}
+          name="exchanger-screen"
+          component={ExchangerScreen}
           options={{
-              drawerLabel: "Bitcoin",
-              headerTitle: "Bitcoin Exchanger",
+              drawerLabel: "Exchanger",
+              headerTitle: "Exchanger",
             }}
-          />
-
-        <Drawer.Screen
-          name="ethereum-screen"
-          component={EthereumExchanger}
-          options={{
-            drawerLabel: "Ethereum",
-            headerTitle: "Ethereum Exchanger"
-          }}
-          />
-
-        <Drawer.Screen
-          name="litecoin-screen"
-          component={LitecoinExchanger}
-          options={{
-            drawerLabel : "Litecoin"
-          }}
-          />
-
-        <Drawer.Screen
-          name="monero-screen"
-          component={MoneroExchanger}
-          options={{
-            drawerLabel : "Monero"
-          }}
           />
 
     </Drawer.Navigator>
@@ -130,7 +111,10 @@ const NavDrawer = () => {
 export default function App() {
   const [fontsLoaded] = useFonts({
     TitilliumWeb: require("./fonts/TitilliumWeb-Regular.ttf"),
-    Aldrich: require("./fonts/Aldrich-Regular.ttf")
+    Aldrich: require("./fonts/Aldrich-Regular.ttf"),
+    HeeboLight: require("./fonts/Heebo-Light.ttf"),
+    HeeboRegular: require("./fonts/Heebo-Regular.ttf"),
+    HeeboMedium: require("./fonts/Heebo-Medium.ttf"),
   });
 
   if(!fontsLoaded) {
