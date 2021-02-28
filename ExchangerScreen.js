@@ -13,6 +13,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
+import { getCryptoExchanger } from "./CryptoExchanger.js";
 import { Exchanger, updateGraphTimeFrame } from './Exchanger.js';
 import { BitcoinExchanger } from './Bitcoin.js';
 import { EthereumExchanger } from './Ethereum.js';
@@ -43,18 +44,20 @@ const styles = StyleSheet.create({
 
 });
 
-// var exchangerScreen;
-
-// export function getGraphTimeframeUni() {
-//   if(exchangerScreen === null)
-//     return '7d';
+// var bitcoinExchanger, litecoinExchanger, ethereumExchanger, moneroExchanger;
 //
-//   return exchangerScreen.getGraphTimeframe();
+// export function loadExchangers() {
+//   bitcoinExchanger = ();
+//   ethereumExchanger = ();
+//   moneroExchanger = ();
+//   litecoinExchanger = (<LitecoinExchanger />);
 // }
 
 export class ExchangerScreen extends Component {
   constructor(props) {
     super(props);
+
+    console.log("ExchangerScreen initialized...");
 
     this.state = {
       /** The type of crypto which the user is currently exchanging **/
@@ -71,13 +74,13 @@ export class ExchangerScreen extends Component {
       return (<BitcoinExchanger />);
 
     if(this.state.chosenCrypto === "btc") {
-      return(<BitcoinExchanger />);
+      return(<BitcoinExchanger cryptoExchanger={getCryptoExchanger("bitcoin")}/>);
     } else if(this.state.chosenCrypto === "eth") {
-      return(<EthereumExchanger />);
+      return(<EthereumExchanger cryptoExchanger={getCryptoExchanger("ethereum")}/>);
     } else if(this.state.chosenCrypto === "ltc") {
-      return(<LitecoinExchanger />);
+      return(<LitecoinExchanger cryptoExchanger={getCryptoExchanger("litecoin")}/>);
     } else if(this.state.chosenCrypto === "mon") {
-      return(<MoneroExchanger />);
+      return(<MoneroExchanger cryptoExchanger={getCryptoExchanger("monero")}/>);
     }
   }
 

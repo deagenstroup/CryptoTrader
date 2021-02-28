@@ -6,7 +6,7 @@ import { useFonts } from 'expo-font';
 import { Feather } from '@expo/vector-icons';
 
 /* components imported from React */
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 /* components imported from the React-Navigation library */
@@ -18,12 +18,16 @@ import {
   DrawerItem,
 } from '@react-navigation/drawer';
 
+/** components and classes imported from other files **/
+import CryptoExchanger, { loadCryptoExchangers, fetchCoinPrices } from "./CryptoExchanger.js";
+import Profile, { setCryptosLoaded } from "./Profile.js";
+import { ExchangerScreen } from "./ExchangerScreen.js";
 import { BitcoinExchanger } from "./Bitcoin.js";
 import { EthereumExchanger } from "./Ethereum.js";
 import { LitecoinExchanger } from "./Litecoin.js";
 import { MoneroExchanger } from "./Monero.js";
-import { ExchangerScreen } from "./ExchangerScreen.js";
-import Profile from "./Profile.js";
+
+
 
 const styles = StyleSheet.create({
   screenHeaderFont : {
@@ -108,6 +112,8 @@ const NavDrawer = () => {
   );
 }
 
+
+
 export default function App() {
   const [fontsLoaded] = useFonts({
     TitilliumWeb: require("./fonts/TitilliumWeb-Regular.ttf"),
@@ -117,7 +123,18 @@ export default function App() {
     HeeboMedium: require("./fonts/Heebo-Medium.ttf"),
   });
 
-  if(!fontsLoaded) {
+  const [cryptoLoaded, setCryptoLoaded] = useState(false);
+  const [cryptoPriceLoaded, setCryptoPriceLoaded] = useState(false);
+
+  loadCryptoExchangers()
+    .catch((error) => console.log("There was an error loading crypto exchangers..."))
+    .then(() => {
+      setCryptoLoaded(true);
+      Profile.setCryptosLoaded(true);
+    });
+
+
+  if(!fontsLoaded || !cryptoLoaded) {
     return <AppLoading />;
   } else {
     return (

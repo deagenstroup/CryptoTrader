@@ -13,6 +13,8 @@ import {
 import AppLoading from 'expo-app-loading';
 import * as FileSystem from 'expo-file-system';
 
+import CryptoExchanger from './CryptoExchanger';
+
 import { LineChart } from 'react-native-chart-kit';
 
 /* custom resources from expo */
@@ -25,8 +27,6 @@ import {
   Entypo,
 } from '@expo/vector-icons';
 // import { useFonts, Inter_900Black } from '@expo-google-fonts/inter';
-
-import { updateNetValues } from './Profile.js';
 
 const styles = StyleSheet.create({
 
@@ -243,6 +243,7 @@ export function round(value, decimals) {
 
 var graphTimeframe = "7d";
 
+//delete
 /* The amount of dollars the user has, which is the same across all exchanger
    components */
 var dollars = 100;
@@ -256,35 +257,6 @@ function forceRender() {
   for(var i = 0; i < exchangersArray.length; i++) {
     exchangersArray[i].forceUpdate();
   }
-}
-
-export function getCryptoPercentageDataArray() {
-  var coinArray = [];
-  for(var i = 0; i < exchangersArray.length; i++) {
-    var coinDollarValue = exchangersArray[i].getCoin() * exchangersArray[i].getCoinPrice();
-    coinArray.push({
-      name: exchangersArray[i].getCoinName(),
-      population: coinDollarValue,
-    });
-  }
-  return coinArray;
-}
-
-export function getTotalCurrentNetValue() {
-  return dollars + getTotalCryptoValue();
-}
-
-export function getTotalCryptoValue() {
-  var totalValue = 0;
-  for(var i = 0; i < exchangersArray.length; i++) {
-    totalValue = totalValue + exchangersArray[i].getCurrentNetValue();
-  }
-  console.log("totalValue: " + totalValue);
-  return totalValue;
-}
-
-export function getDollars() {
-  return dollars;
 }
 
 export function updateGraphTimeFrame(inTimeFrame) {
@@ -301,7 +273,6 @@ export function get7DChartLabels() {
   var i;
   for(i = 6; i >= 0; i = i - 1) {
     var label = "" + (date.getMonth() + 1) + "/" + date.getDate();
-    console.log(i + ": " + label);
     labelArray[i] = "" + (date.getMonth() + 1) + "/" + date.getDate();
     date = new Date(date.getTime() - 86400000);
   }
@@ -344,29 +315,14 @@ function get1MChartLabels() {
 }
 
 /** An abstract component which is used on a screen to exchange a cryptocurrency **/
-export default class Exchanger extends Component {
+export default class ExchangerComponent extends Component {
 
   constructor(props) {
     super(props);
 
     this.state = {
 
-      /** If true, the price of the coin has been loaded from the web into
-          the component **/
-      isPriceLoaded: false,
-
-      /** If true, both the amount of dollars and the amount of coins the user
-          owns has been loaded into the component **/
-      areValuesLoaded: false,
-
-
       isChartDataLoaded: false,
-
-      /** The amount of respective cryptocurrency that the user owns. **/
-      coin: 0,
-
-      /** The price of a single unit of cryptocurrency, in dollars **/
-      coinPrice: 0,
 
       /** If true, then cryptocurrency is being bought, otherwise it is being sold.
           If null, no exchange mode has been decided by the user yet **/
@@ -376,32 +332,19 @@ export default class Exchanger extends Component {
           box. If false, the dollar is. **/
       coinExchangeMode: true,
 
+      /** Text that is contained within the input box within the exchange box **/
       inputText: "",
-
-      /** Text that is contained within the input box next to the buy button **/
-      buyInputText: "",
-
-      /** Text that is contained within the input box next to the sell button **/
-      sellInputText: "",
 
       /** Object which holds the data used in the chart. Is constructed by
           specific subclasses when loaded **/
       chartData: null,
 
-      hideChart: false,
+      cryptoExchanger: props.cryptoExchanger,
 
     }
 
     this.exchangeCurrency.bind(this);
-    this.updateBuyInputText.bind(this);
-    this.saveValuesToFile.bind(this);
-    this.loadValuesFromFile.bind(this);
     this.getCoinExchangeMode.bind(this);
-    this.switchCoinExchangeMode.bind(this);
-    this.saveDollarsToFile.bind(this);
-    this.saveCoinsToFile.bind(this);
-    this.loadDollarsFromFile.bind(this);
-    this.loadCoinsFromFile.bind(this);
 
     exchangersArray.push(this);
   }
@@ -410,14 +353,14 @@ export default class Exchanger extends Component {
   componentDidMount() {
     this.fetchCoinPrice();
     this.fetchCoinData();
-    this.loadValuesFromFile()
-      .catch((error) => {
-        console.log("Error loading values from file.");
-        dollars = 100;
-        this.setState({coin: 0});
-      }).finally(() => {
-        this.setState({areValuesLoaded: true});
-      });
+    // this.loadValuesFromFile()
+    //   .catch((error) => {
+    //     console.log("Error loading values from file.");
+    //     dollars = 100;
+    //     this.setState({coin: 0});
+    //   }).finally(() => {
+    //     this.setState({areValuesLoaded: true});
+    //   });
 
     // this.setState({areValuesLoaded: true});
 
@@ -427,8 +370,10 @@ export default class Exchanger extends Component {
       price of whichever cryptocurrency the class represents. **/
   fetchCoinPrice() {}
 
-  fetchCoinDataWithName(coinName) {
-    var url = "https://api.coingecko.com/api/v3/coins/" + coinName + "/market_chart?vs_currency=usd&";
+  /** Fetchs data about the cryptocurrency with the supplied name and applies
+      the data to the graph in the Exchanger based on the graph's mode (7d, 24h, 1m) **/
+  fetchCoinData() {
+    var url = "https://api.coingecko.com/api/v3/coins/" + this.getCoinName()   + "/market_chart?vs_currency=usd&";
 
     if(graphTimeframe === "7d") {
       url = url + "days=7&interval=daily";
@@ -452,18 +397,16 @@ export default class Exchanger extends Component {
       .catch((error) => console.error(error))
       .finally(() => {
         this.setState({isChartDataLoaded: true});
-        this.updateProfileValues();
       });
   }
 
+  /** Helper methods for fetchCoinDataWithName() **/
   parse7DCoinData(json) {
     var chartLabels = get7DChartLabels();
     var chartDataArray = [10, 12, 15, 9, 8, 21, 19];
 
     for(var i = 0; i < 7; i++) {
       var num = round(json.prices[i][1], 2);
-      // console.log("num: " + num);
-      // var num = round( json.prices[i][1], 2);
       chartDataArray[i] = num;
     }
 
@@ -478,7 +421,6 @@ export default class Exchanger extends Component {
 
     this.setChartData(chartData);
   }
-
   parse24HCoinData(json) {
     var chartLabels = get24HChartLabels();
     var chartDataArray = [ 1, 2, 3, 4, 5, 6, 7];//, 7, 8, 9, 10, 11, 12 ];
@@ -505,7 +447,6 @@ export default class Exchanger extends Component {
 
     this.setChartData(chartData);
   }
-
   parse1MCoinData(json) {
     var chartLabels = get1MChartLabels();
     var chartDataArray = [ 1, 2, 3, 4, 5, 6, 7];//, 7, 8, 9, 10, 11, 12 ];
@@ -529,32 +470,100 @@ export default class Exchanger extends Component {
   }
 
 
+
   getCoinExchangeMode () {
     return this.state.coinExchangeMode;
   }
 
-  getCoinExchangeModeString() {
-    if(this.getCoinExchangeMode()) {
-      return this.getCoinName();
-    } else {
-      return "dollars";
-    }
+  getCoinFileName() {
+    return this.getCoinName() + ".txt";
   }
 
   getCoinName() {
-    return "coin";
+    return this.state.cryptoExchanger.getCoinName();
   }
 
-  getCoinIcon(inColor) {
-    if(isNaN(inColor))
-      return (<FontAwesome name="bitcoin" size={32} color="black" />);
+  getCoin() {
+    return this.state.cryptoExchanger.getCoin();
+  }
+
+  getCoinPrice() {
+    return this.state.cryptoExchanger.getCoinPrice();
+  }
+
+  getDollars() {
+    return CryptoExchanger.getDollars();
+  }
+
+  /** Calculates the net amount of dollars that would be gained or lost from
+      an exchange of the number the user has specified in the inputText **/
+  getDollarExchangeValue() {
+    var inputValue = parseFloat(this.state.inputText);
+    if(isNaN(inputValue))
+      return 0.0;
+
+    // if the user is buying coins
+    if(this.state.exchangeMode) {
+
+      // and the user is buying them in coins
+      if(this.state.coinExchangeMode) {
+        return 0 - this.state.cryptoExchanger.getDollarExchangeValue(inputValue);
+      }
+      // and the user is buying them in dollars worth
+      else {
+        return 0 - inputValue;
+      }
+    }
+    // if the user is selling coins
     else {
-      return (<FontAwesome name="bitcoin" size={32} color={inColor} />);
+      // and the user is selling them in coins
+      if(this.state.coinExchangeMode) {
+        return 0 + this.state.cryptoExchanger.getDollarExchangeValue(inputValue);
+      }
+      // and the user is selling them in dollars worth
+      else {
+        return 0 + inputValue;
+      }
     }
   }
 
+  /** Calculates the net amount of crypto that would be gained or lost from
+      an exchange of the number the user has specified in the inputText **/
+  getCryptoExchangeValue()  {
+    var inputValue = parseFloat(this.state.inputText);
+    if(isNaN(inputValue))
+      return 0.0;
+
+    // if the user is buying coins
+    if(this.state.exchangeMode) {
+
+      // and the user is buying them in coins
+      if(this.state.coinExchangeMode) {
+        return inputValue;
+      }
+      // and the user is buying them in dollars worth
+      else {
+        return 0 + this.state.cryptoExchanger.getCryptoExchangeValue(inputValue);
+      }
+    }
+    // if the user is selling coins
+    else {
+      // and the user is selling them in coins
+      if(this.state.coinExchangeMode) {
+        return 0 - inputValue;
+      }
+      // and the user is selling them in dollars worth
+      else {
+        return 0 - this.state.cryptoExchanger.getCryptoExchangeValue(inputValue);
+      }
+    }
+  }
+
+
+
+
   getLineChart() {
-    if(this.state.isChartDataLoaded && !this.state.hideChart) {
+    if(this.state.isChartDataLoaded) {
       return (
         <LineChart
           data={this.state.chartData}
@@ -591,82 +600,12 @@ export default class Exchanger extends Component {
     }
   }
 
-  getCoin() {
-    return round(this.state.coin, 5);
-  }
-
-  getCoinPrice() {
-    return this.state.coinPrice;
-  }
-
-  getDollars() {
-    return round(dollars, 2);
-  }
-
-  getDollarExchangeValue() {
-    var inputValue = parseFloat(this.state.inputText);
-    if(isNaN(inputValue))
-      return 0.0;
-
-    // if the user is buying coins
-    if(this.state.exchangeMode) {
-
-      // and the user is buying them in coins
-      if(this.state.coinExchangeMode) {
-        return 0 - (inputValue * this.state.coinPrice);
-      }
-      // and the user is buying them in dollars worth
-      else {
-        return 0 - inputValue;
-      }
-    }
-    // if the user is selling coins
+  getCoinIcon(inColor) {
+    if(isNaN(inColor))
+      return (<FontAwesome name="bitcoin" size={32} color="black" />);
     else {
-      // and the user is selling them in coins
-      if(this.state.coinExchangeMode) {
-        return 0 + (inputValue * this.state.coinPrice);
-      }
-      // and the user is selling them in dollars worth
-      else {
-        return 0 + inputValue;
-      }
+      return (<FontAwesome name="bitcoin" size={32} color={inColor} />);
     }
-  }
-
-  getCryptoExchangeValue()  {
-    var inputValue = parseFloat(this.state.inputText);
-    if(isNaN(inputValue))
-      return 0.0;
-
-    // if the user is buying coins
-    if(this.state.exchangeMode) {
-
-      // and the user is buying them in coins
-      if(this.state.coinExchangeMode) {
-        return inputValue;
-      }
-      // and the user is buying them in dollars worth
-      else {
-        return 0 + (inputValue / this.state.coinPrice);
-      }
-    }
-    // if the user is selling coins
-    else {
-      // and the user is selling them in coins
-      if(this.state.coinExchangeMode) {
-        return 0 - inputValue;
-      }
-      // and the user is selling them in dollars worth
-      else {
-        return 0 - (inputValue / this.state.coinPrice);
-      }
-    }
-  }
-
-  getCurrentNetValue() {
-    var currentValue = (this.state.coin * this.state.coinPrice);
-    console.log("coin + coinPrice at getCurrentNet Value " + this.state.coin + " " + this.state.coinPrice);
-    return currentValue;
   }
 
   getCurrencyExchangeBox() {
@@ -765,74 +704,9 @@ export default class Exchanger extends Component {
         </View>
       );
     }
-
-    // if(this.state.exchangeMode) {
-    //   return(
-    //     <View style={ [styles.columnCenteredFlexBox, styles.wideContainer] }>
-    //
-    //       <View style={ styles.rowCenteredFlexBox }>
-    //         <TouchableOpacity
-    //           style={ [styles.button, styles.square, styles.blackBackground] }
-    //           onPress={() => {
-    //             this.exchangeCurrency();
-    //             this.setExchangeMode(null);
-    //           }} >
-    //           <Text style={ [styles.webFontSmall, styles.white] }>+</Text>
-    //         </TouchableOpacity>
-    //         <TextInput
-    //           style={[styles.textInputMargin, styles.webFont, styles.wide]}
-    //           keyboardType="decimal-pad"
-    //           onChangeText={text => this.updateInputText(text)}
-    //           placeholder="0"
-    //           value={this.state.inputText} />
-    //       </View>
-    //
-    //     </View>
-    //   );
-    // } else {
-    //   return(
-    //     <View style={ [styles.columnCenteredFlexBox, styles.wideContainer] }>
-    //
-    //       <View style={ styles.rowCenteredFlexBox }>
-    //         <TouchableOpacity
-    //           style={ [styles.button, styles.square, styles.blackBackground] }
-    //           onPress={() => {
-    //             this.exchangeCurrency();
-    //             this.setExchangeMode(null);
-    //           }} >
-    //           <Text style={ [styles.webFontSmall, styles.white] }>-</Text>
-    //         </TouchableOpacity>
-    //         <TextInput
-    //           style={[styles.textInputMargin, styles.webFont, styles.wide]}
-    //           keyboardType="decimal-pad"
-    //           onChangeText={text => this.updateInputText(text)}
-    //           placeholder="0"
-    //           value={this.state.inputText} />
-    //       </View>
-    //
-    //     </View>
-    //   );
-      // }
-
   }
 
 
-
-  setCoin(inCoin) {
-    this.setState({
-      coin: inCoin,
-    }, () => {
-      this.updateProfileValues()
-    });
-  }
-
-  setCoinPrice(inCoinPrice) {
-    this.setState({
-      coinPrice: inCoinPrice,
-    }, () => {
-      this.updateProfileValues();
-    });
-  }
 
   setChartData(inData) {
     this.setState({
@@ -841,15 +715,6 @@ export default class Exchanger extends Component {
       this.setState({
         isChartDataLoaded: true,
       });
-    });
-    // this.setState({
-    //    isChartDataLoaded: true,
-    // });
-  }
-
-  setHideChart(inHideChart) {
-    this.setState({
-      hideChart: inHideChart,
     });
   }
 
@@ -861,28 +726,8 @@ export default class Exchanger extends Component {
     this.setState({coinExchangeMode: inMode});
   }
 
-  switchCoinExchangeMode () {
-    if(this.state.coinExchangeMode) {
-      this.setState({coinExchangeMode: false});
-    } else {
-      this.setState({coinExchangeMode: true});
-    }
-  }
-
   updateInputText(inStr) {
     this.setState({inputText: inStr});
-  }
-
-  updateBuyInputText (inStr) {
-    this.setState({buyInputText: inStr});
-  }
-
-  updateSellInputText (inStr) {
-    this.setState({sellInputText: inStr});
-  }
-
-  updateProfileValues() {
-    updateNetValues(getTotalCryptoValue(), getDollars());
   }
 
   /** Performs an exchange of currency. If the provided parameter is true, then
@@ -890,16 +735,16 @@ export default class Exchanger extends Component {
       is bought, otherwise it is sold, using the respective input text values
       as the quantity of currency being bought or sold. **/
   exchangeCurrency () {
+    var inputValue = parseFloat(this.state.inputText);
+    if(isNaN(inputValue))
+      return;
 
-    var newCoinAmount = this.state.coin + this.getCryptoExchangeValue();
-    var newDollarAmount = dollars + this.getDollarExchangeValue();
 
-    dollars = newDollarAmount;
-    this.setCoin(newCoinAmount);
-
-    this.saveValuesToFile(newDollarAmount, newCoinAmount)
-      .catch((error) => console.error(error))
-      .finally(() => console.log("Values saved successfully."));
+    if(this.state.exchangeMode) {
+      this.state.cryptoExchanger.buyCrypto(inputValue, !this.state.coinExchangeMode);
+    } else {
+      this.state.cryptoExchanger.sellCrypto(inputValue, !this.state.coinExchangeMode);
+    }
 
     this.updateInputText("");
 
@@ -908,74 +753,8 @@ export default class Exchanger extends Component {
 
 
 
-  async saveDollarsToFile(dollarAmount) {
-    var fileObj = {
-      fileDollars: dollarAmount,
-    }
-
-    await FileSystem.writeAsStringAsync(
-      FileSystem.documentDirectory + "dollars.txt",
-      JSON.stringify(fileObj),
-      { encoding: FileSystem.EncodingType.UTF8 }
-    );
-  }
-
-  async saveCoinsToFile(coinAmount) {
-    var fileObj = {
-      fileCoins: coinAmount,
-    }
-
-    await FileSystem.writeAsStringAsync(
-      FileSystem.documentDirectory + this.getCoinFileName(),
-      JSON.stringify(fileObj),
-      { encoding: FileSystem.EncodingType.UTF8 }
-    );
-  }
-
-  // Saves the amount of dollars and coins that the user currently has to file
-  async saveValuesToFile(dollarAmount, coinAmount) {
-    this.saveDollarsToFile(dollarAmount);
-    this.saveCoinsToFile(coinAmount);
-  }
-
-  async loadDollarsFromFile() {
-    let fileString = await FileSystem.readAsStringAsync(
-      FileSystem.documentDirectory + "dollars.txt",
-      { encoding: FileSystem.EncodingType.UTF8 }
-    );
-    console.log("Loaded File Object: " + fileString);
-
-    var fileObj = JSON.parse(fileString);
-    dollars = fileObj.fileDollars;
-  }
-
-  async loadCoinsFromFile() {
-    let fileString = await FileSystem.readAsStringAsync(
-      FileSystem.documentDirectory + this.getCoinFileName(),
-      { encoding: FileSystem.EncodingType.UTF8 }
-    );
-    console.log("Loaded File Object: " + fileString);
-
-    var fileObj = JSON.parse(fileString);
-
-    this.setCoin(fileObj.fileCoins);
-    // this.setState({
-    //   coin: fileObj.fileCoins,
-    // });
-  }
-
-  // Loads the amount of dollars and bitcoin from the last time it was saved
-  async loadValuesFromFile() {
-    this.loadDollarsFromFile()
-      .catch((error) => this.setState({dollarAmount: 0}));
-    this.loadCoinsFromFile()
-      .catch((error) => this.setState({coinAmount: 0}));
-  }
-
-
-
   render () {
-    if(!this.state.isPriceLoaded || !this.state.areValuesLoaded || !this.state.isChartDataLoaded) {
+    if(!this.state.cryptoExchanger.isPriceLoaded() || !this.state.cryptoExchanger.areValuesLoaded()) {
       return <AppLoading />;
     } else {
       return (
@@ -995,9 +774,9 @@ export default class Exchanger extends Component {
               </View>
 
               <View style={styles.valuesColumn}>
-                <Text style={styles.webFont}>{this.getDollars()}</Text>
-                <Text style={styles.webFont}>{this.getCoin()}</Text>
-                <Text style={styles.webFont}>{this.state.coinPrice}</Text>
+                <Text style={styles.webFont}>{round(this.getDollars(), 2)}</Text>
+                <Text style={styles.webFont}>{round(this.getCoin(), 5)}</Text>
+                <Text style={styles.webFont}>{this.getCoinPrice()}</Text>
               </View>
             </View>
 

@@ -14,7 +14,7 @@ import { Feather, MaterialIcons, Foundation } from '@expo/vector-icons';
 
 import { PieChart } from 'react-native-chart-kit';
 
-import { getCryptoPercentageDataArray } from "./Exchanger.js";
+import CryptoExchanger, { getCryptoPercentageDataArray, getCryptoExchanger, areCryptoExchangersLoaded } from "./CryptoExchanger.js";
 
 // import Dialog, { DialogTitle, DialogContent, DialogFooter, DialogButton } from 'react-native-popup-dialog';
 
@@ -126,6 +126,15 @@ const styles = StyleSheet.create({
 
 var profileComponent;
 
+export function forceProfileUpdate() {
+  if(profileComponent != null)
+    profileComponent.forceUpdate();
+}
+
+export function setCryptosLoaded(inValue) {
+  profileComponent.setState({areCryptosLoaded: inValue});
+}
+
 export function updateTotalNetValue(inValue) {
   profileComponent.setTotalNetValue(inValue);
   profileComponent.forceUpdate();
@@ -158,6 +167,8 @@ export default class Profile extends Component {
 
       isLoaded: false,
 
+      areCryptosLoaded: false,
+
       resetDialogVisible: false,
 
     }
@@ -178,9 +189,14 @@ export default class Profile extends Component {
     this.loadValuesFromFile()
         .catch((error) => console.log("Error loading profile from file."))
         .finally(() => this.setState({isLoaded: true}));
-    // this.setState({isLoaded: true});
   }
 
+
+  static cryptosLoaded = false;
+
+  static setCryptosLoaded(inValue) {
+    Profile.cryptosLoaded = inValue;
+  }
 
 
   getDateCreated() {
@@ -206,7 +222,6 @@ export default class Profile extends Component {
       data[i].legendFontSize = 15;
       data[i].legendFontColor = "black";
       color = Math.trunc(color + colorGradient);
-      console.log(data[i]);
     }
     return data;
   }
@@ -326,7 +341,7 @@ export default class Profile extends Component {
 
 
   render() {
-    if(!this.state.isLoaded) {
+    if(!this.state.isLoaded || !Profile.cryptosLoaded) {
       return <AppLoading />;
     } else {
       return (
@@ -345,9 +360,12 @@ export default class Profile extends Component {
             <View style={ styles.statsContainerRight }>
               <Text style={ styles.statsText } >{this.getDateCreatedString()}</Text>
               <Text style={ styles.statsText } >{this.getProfileAge()} days</Text>
-              <Text style={ styles.statsText } >${round(this.state.currentTotalCryptoValue+this.state.currentDollarValue, 2)}</Text>
+              {/**<Text style={ styles.statsText } >${round(this.state.currentTotalCryptoValue+this.state.currentDollarValue, 2)}</Text>
               <Text style={ [styles.statsText, styles.statsSubtext] } >${round(this.state.currentTotalCryptoValue, 2)}</Text>
-              <Text style={ [styles.statsText, styles.statsSubtext] } >${round(this.state.currentDollarValue, 2)}</Text>
+              <Text style={ [styles.statsText, styles.statsSubtext] } >${round(this.state.currentDollarValue, 2)}</Text>**/}
+              <Text style={ styles.statsText } >${round(CryptoExchanger.getTotalCurrentNetValue(), 2)}</Text>
+              <Text style={ [styles.statsText, styles.statsSubtext] } >${round(CryptoExchanger.getTotalCryptoValue(), 2)}</Text>
+              <Text style={ [styles.statsText, styles.statsSubtext] } >${round(CryptoExchanger.getDollars(), 2)}</Text>
             </View>
 
             {/**<Text style={ styles.statsText } >date started: {this.getDateCreatedString()}</Text>
