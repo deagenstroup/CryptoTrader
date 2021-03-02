@@ -1,11 +1,13 @@
 /* components imported from React */
 import React, { Component } from 'react';
 import {
+  Modal,
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
   Dimensions,
+  Button,
 } from 'react-native';
 
 import AppLoading from 'expo-app-loading';
@@ -14,9 +16,9 @@ import { Feather, MaterialIcons, Foundation } from '@expo/vector-icons';
 
 import { PieChart } from 'react-native-chart-kit';
 
-import CryptoExchanger, { getCryptoPercentageDataArray, getCryptoExchanger, areCryptoExchangersLoaded } from "./CryptoExchanger.js";
+// import { Modal, ModalContent, ModalPortal } from 'react-native-modals';
 
-// import Dialog, { DialogTitle, DialogContent, DialogFooter, DialogButton } from 'react-native-popup-dialog';
+import CryptoExchanger from "./CryptoExchanger.js";
 
 function round(value, decimals) {
   var num = Number(Math.trunc(value+'e'+decimals)+'e-'+decimals);
@@ -30,7 +32,7 @@ const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
     flexDirection: 'column',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
 
     backgroundColor: 'white',
@@ -122,44 +124,81 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
+  centeredContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+
+    // borderColor: 'green',
+    // borderWidth: 2,
+  },
+
+  dialogContainer: {
+    flex: 0,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+
+    backgroundColor: 'white',
+    borderRadius: 10,
+    elevation: 5,
+    padding: 15,
+
+    // borderColor: 'red',
+    // borderWidth: 2,
+  },
+
+  dialogRow: {
+    flex: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 5,
+    marginBottom: 5,
+
+    // borderWidth: 2,
+    // borderColor: 'blue',
+  },
+
+  dialogButton: {
+    width: 100,
+    height: 45,
+    borderRadius: 5 ,
+    backgroundColor: 'rgb(181, 181, 181)',
+    marginLeft: 5,
+    marginRight: 5,
+  },
+
+  dialogTextContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  dialogText: {
+    fontFamily: 'TitilliumWeb',
+    fontSize: 22,
+  },
+
 });
 
-var profileComponent;
-
-export function forceProfileUpdate() {
-  if(profileComponent != null)
-    profileComponent.forceUpdate();
-}
-
-export function setCryptosLoaded(inValue) {
-  profileComponent.setState({areCryptosLoaded: inValue});
-}
-
-export function updateTotalNetValue(inValue) {
-  profileComponent.setTotalNetValue(inValue);
-  profileComponent.forceUpdate();
-}
-
-export function updateNetValues(inCryptoValue, inDollarValue) {
-  profileComponent.setTotalCryptoValue(inCryptoValue);
-  profileComponent.setDollarValue(inDollarValue);
-  profileComponent.forceUpdate();
-}
-
-var colorsArray = ['rgba(131, 167, 234, 1)', '#F00', 'rgb(0, 0, 255)', 'rgb(155, 0, 0)'];
-
 export default class Profile extends Component {
+
+  static profileComponent;
+
+  static colorsArray = ['rgba(131, 167, 234, 1)', '#F00', 'rgb(0, 0, 255)', 'rgb(155, 0, 0)'];
+
+  static forceProfileUpdate() {
+    if(Profile.profileComponent != null)
+      Profile.profileComponent.forceUpdate();
+
+    console.log("Forcing profile update...");
+  }
 
   constructor(props) {
     super(props);
 
     this.state = {
-
-      currentTotalNetValue: 0,
-
-      currentTotalCryptoValue: 0,
-
-      currentDollarValue: 0,
 
       dateCreated: new Date(),
 
@@ -167,22 +206,11 @@ export default class Profile extends Component {
 
       isLoaded: false,
 
-      areCryptosLoaded: false,
-
       resetDialogVisible: false,
 
     }
 
-    this.setResetDialogVisible.bind(this);
-    this.getResetDialog.bind(this);
-    this.getDateCreated.bind(this);
-    this.getDateCreatedString.bind(this);
-    this.getProfileAge.bind(this);
-    this.changeProfile.bind(this);
-    this.resetProfile.bind(this);
-    this.deleteProfile.bind(this);
-
-    profileComponent = this;
+    Profile.profileComponent = this;
   }
 
   componentDidMount() {
@@ -191,12 +219,6 @@ export default class Profile extends Component {
         .finally(() => this.setState({isLoaded: true}));
   }
 
-
-  static cryptosLoaded = false;
-
-  static setCryptosLoaded(inValue) {
-    Profile.cryptosLoaded = inValue;
-  }
 
 
   getDateCreated() {
@@ -214,7 +236,7 @@ export default class Profile extends Component {
   }
 
   getPieChartData() {
-    var data = getCryptoPercentageDataArray();
+    var data = CryptoExchanger.getCryptoPercentageDataArray();
     var colorGradient = 255 / data.length;
     var color = 0;
     for(var i = 0; i < data.length; i++) {
@@ -226,89 +248,82 @@ export default class Profile extends Component {
     return data;
   }
 
+  isResetDialogVisible() {
+    return this.state.resetDialogVisible;
+  }
+
   getResetDialog() {
     return (
-    {/**<Dialog
-        onDismiss={() => {
-          this.setResetDialogVisible(false);
-        }}
-        width={0.9}
+      <Modal
         visible={this.state.resetDialogVisible}
-        dialogTitle={
-          <DialogTitle
-            title="Reset Profile"
-            style={{
-              backgroundColor: '#F7F7F8',
-            }}
-            hasTitleBar={false}
-            align="left"
-          />
-        }
-        footer={
-          <DialogFooter>
-            <DialogButton
-              text="Yes"
-              onPress={() => {
-                this.resetProfile();
-                this.setResetDialogVisible(false);
-              }}
-              key="button-1"
-            />
-            <DialogButton
-              text="No"
-              onPress={() => {
-                this.setResetDialogVisible(false);
-              }}
-              key="button-2"
-            />
-          </DialogFooter>
-        }>
-        <DialogContent
-          style={{
-            backgroundColor: '#F7F7F8',
-          }}>
-          <Text>Are you sure you would like to reset your profile?</Text>
-        </DialogContent>
-      </Dialog>**/}
+        transparent={true}
+        onRequestClose={() => {
+          this.setState({resetDialogVisible: false});
+        }} >
+
+          <View style={styles.centeredContainer}>
+
+            <View style={ styles.dialogContainer } >
+
+              <View style={ styles.dialogRow }>
+                <Text style={ styles.dialogText }>Are you sure you would like to reset your profile?</Text>
+              </View>
+
+              <View style={ styles.dialogRow }>
+
+                <TouchableOpacity
+                  style={ styles.dialogButton }
+                  onPress={() => {
+                    console.log("Yes button pressed...");
+                    this.resetProfile();
+                    this.setState({resetDialogVisible: false});
+                  }} >
+                  <View style={styles.dialogTextContainer}>
+                    <Text style={styles.dialogText}>Yes</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={ styles.dialogButton }
+                  onPress={() => {
+                    this.setState({resetDialogVisible: false});
+                  }} >
+                  <View style={styles.dialogTextContainer}>
+                    <Text style={styles.dialogText}>No</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/**<Button title="close" onPress={() => {
+                  console.log("Yes button pressed...");
+                  this.resetProfile();
+                  this.setState({resetDialogVisible: false});
+                }} />**/}
+
+              </View>
+
+            </View>
+
+          </View>
+
+      </Modal>
     );
   }
 
 
-  setTotalNetValue(inValue) {
-    this.setState({
-      currentTotalNetValue: inValue,
-    });
-  }
-
-  setTotalCryptoValue(inValue) {
-    this.setState({
-      currentTotalCryptoValue: inValue,
-    });
-  }
-
-  setDollarValue(inValue) {
-    this.setState({
-      currentDollarValue: inValue,
-    });
-  }
 
   setResetDialogVisible(inVisible) {
     this.setState({resetDialogVisible: inVisible});
   }
 
-
-
-  changeProfile() {
-    console.log("Change profile button pressed.");
-    this.saveValuesToFile();
-  }
-
   resetProfile() {
     console.log("Reset profile button pressed.");
-  }
 
-  deleteProfile() {
-    console.log("Delete profile button pressed.");
+    this.setState({
+      dateCreated: new Date(),
+    });
+
+    CryptoExchanger.resetCryptoExchangers();
+
+    this.saveValuesToFile();
   }
 
 
@@ -341,37 +356,11 @@ export default class Profile extends Component {
 
 
   render() {
-    if(!this.state.isLoaded || !Profile.cryptosLoaded) {
+    if(!this.state.isLoaded) {
       return <AppLoading />;
     } else {
       return (
         <View style={ styles.screenContainer } >
-
-          <View style={ [styles.statsContainer, styles.subcontainerSpacer] } >
-
-            <View style={ styles.statsContainerLeft }>
-              <Text style={ styles.statsTextLabel } >date started</Text>
-              <Text style={ styles.statsTextLabel } >profile age</Text>
-              <Text style={ styles.statsTextLabel } >net worth</Text>
-              <Text style={ [styles.statsTextLabel, styles.statsSubtext] }>total crypto value</Text>
-              <Text style={ [styles.statsTextLabel, styles.statsSubtext] }>total dollars</Text>
-            </View>
-
-            <View style={ styles.statsContainerRight }>
-              <Text style={ styles.statsText } >{this.getDateCreatedString()}</Text>
-              <Text style={ styles.statsText } >{this.getProfileAge()} days</Text>
-              {/**<Text style={ styles.statsText } >${round(this.state.currentTotalCryptoValue+this.state.currentDollarValue, 2)}</Text>
-              <Text style={ [styles.statsText, styles.statsSubtext] } >${round(this.state.currentTotalCryptoValue, 2)}</Text>
-              <Text style={ [styles.statsText, styles.statsSubtext] } >${round(this.state.currentDollarValue, 2)}</Text>**/}
-              <Text style={ styles.statsText } >${round(CryptoExchanger.getTotalCurrentNetValue(), 2)}</Text>
-              <Text style={ [styles.statsText, styles.statsSubtext] } >${round(CryptoExchanger.getTotalCryptoValue(), 2)}</Text>
-              <Text style={ [styles.statsText, styles.statsSubtext] } >${round(CryptoExchanger.getDollars(), 2)}</Text>
-            </View>
-
-            {/**<Text style={ styles.statsText } >date started: {this.getDateCreatedString()}</Text>
-            <Text style={ styles.statsText } >profile age: {this.getProfileAge()} days</Text>
-            <Text style={ styles.statsText } >net worth: ${round(this.state.currentTotalNetValue, 2)}</Text>**/}
-          </View>
 
           <PieChart
             data={this.getPieChartData()}
@@ -397,59 +386,39 @@ export default class Profile extends Component {
             //absolute //for the absolute number remove if you want percentage
           />
 
-          <View style={ [styles.buttonContainer, styles.subcontainerSpacer] } >
+          <View style={ [styles.statsContainer, styles.subcontainerSpacer] } >
 
+            <View style={ styles.statsContainerLeft }>
+              <Text style={ styles.statsTextLabel } >date started</Text>
+              <Text style={ styles.statsTextLabel } >profile age</Text>
+              <Text style={ styles.statsTextLabel } >net worth</Text>
+              <Text style={ [styles.statsTextLabel, styles.statsSubtext] }>total crypto value</Text>
+              <Text style={ [styles.statsTextLabel, styles.statsSubtext] }>total dollars</Text>
+            </View>
+
+            <View style={ styles.statsContainerRight }>
+              <Text style={ styles.statsText } >{this.getDateCreatedString()}</Text>
+              <Text style={ styles.statsText } >{this.getProfileAge()} days</Text>
+              <Text style={ styles.statsText } >${round(CryptoExchanger.getTotalCurrentNetValue(), 2)}</Text>
+              <Text style={ [styles.statsText, styles.statsSubtext] } >${round(CryptoExchanger.getTotalCryptoValue(), 2)}</Text>
+              <Text style={ [styles.statsText, styles.statsSubtext] } >${round(CryptoExchanger.getDollars(), 2)}</Text>
+            </View>
+
+          </View>
+
+          <View style={ [styles.buttonContainer, styles.subcontainerSpacer] } >
 
             <TouchableOpacity
               style={ styles.profileButton }
-              onPress={ () => this.setResetDialogVisible(true) } >
+              onPress={ () => {
+                this.setState({resetDialogVisible: true});
+              }} >
               <View style={ styles.iconContainer }>
                 <Foundation name="loop" size={34} color="white" />
               </View>
             </TouchableOpacity>
 
-            {/**<Dialog
-                onDismiss={() => {
-                  this.setResetDialogVisible(false);
-                }}
-                width={0.9}
-                visible={this.state.resetDialogVisible}
-                dialogTitle={
-                  <DialogTitle
-                    title="Reset Profile"
-                    style={{
-                      backgroundColor: '#F7F7F8',
-                    }}
-                    hasTitleBar={false}
-                    align="left"
-                  />
-                }
-                footer={
-                  <DialogFooter>
-                    <DialogButton
-                      text="Yes"
-                      onPress={() => {
-                        this.resetProfile();
-                        this.setResetDialogVisible(false);
-                      }}
-                      key="button-1"
-                    />
-                    <DialogButton
-                      text="No"
-                      onPress={() => {
-                        this.setResetDialogVisible(false);
-                      }}
-                      key="button-2"
-                    />
-                  </DialogFooter>
-                }>
-                <DialogContent
-                  style={{
-                    backgroundColor: '#F7F7F8',
-                  }}>
-                  <Text>Are you sure you would like to reset your profile?</Text>
-                </DialogContent>
-              </Dialog>**/}
+            {this.getResetDialog()}
 
           </View>
 

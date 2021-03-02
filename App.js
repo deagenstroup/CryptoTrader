@@ -19,13 +19,9 @@ import {
 } from '@react-navigation/drawer';
 
 /** components and classes imported from other files **/
-import CryptoExchanger, { loadCryptoExchangers, fetchCoinPrices } from "./CryptoExchanger.js";
-import Profile, { setCryptosLoaded } from "./Profile.js";
-import { ExchangerScreen } from "./ExchangerScreen.js";
-import { BitcoinExchanger } from "./Bitcoin.js";
-import { EthereumExchanger } from "./Ethereum.js";
-import { LitecoinExchanger } from "./Litecoin.js";
-import { MoneroExchanger } from "./Monero.js";
+import CryptoExchanger from "./CryptoExchanger.js";
+import Profile from "./Profile.js";
+import ExchangerScreen from "./ExchangerScreen.js";
 
 
 
@@ -126,11 +122,10 @@ export default function App() {
   const [cryptoLoaded, setCryptoLoaded] = useState(false);
   const [cryptoPriceLoaded, setCryptoPriceLoaded] = useState(false);
 
-  loadCryptoExchangers()
+  CryptoExchanger.loadCryptoExchangers()
     .catch((error) => console.log("There was an error loading crypto exchangers..."))
     .then(() => {
       setCryptoLoaded(true);
-      Profile.setCryptosLoaded(true);
     });
 
 

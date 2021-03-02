@@ -253,7 +253,7 @@ var exchangersArray = [];
 
 /* Forces all of the exchanger objects to re-render their child components to
    screen */
-function forceRender() {
+export function forceRender() {
   for(var i = 0; i < exchangersArray.length; i++) {
     exchangersArray[i].forceUpdate();
   }
@@ -353,17 +353,6 @@ export default class ExchangerComponent extends Component {
   componentDidMount() {
     this.fetchCoinPrice();
     this.fetchCoinData();
-    // this.loadValuesFromFile()
-    //   .catch((error) => {
-    //     console.log("Error loading values from file.");
-    //     dollars = 100;
-    //     this.setState({coin: 0});
-    //   }).finally(() => {
-    //     this.setState({areValuesLoaded: true});
-    //   });
-
-    // this.setState({areValuesLoaded: true});
-
   }
 
   /** Abstract method which is to be overwritten by subclasses, getting the

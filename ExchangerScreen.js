@@ -8,12 +8,13 @@ import {
   View,
   Dimensions,
   KeyboardAvoidingView,
+  Picker, 
 } from 'react-native';
 
-import { Picker } from '@react-native-picker/picker';
+// import { Picker } from '@react-native-picker/picker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
-import { getCryptoExchanger } from "./CryptoExchanger.js";
+import CryptoExchanger from "./CryptoExchanger.js";
 import { Exchanger, updateGraphTimeFrame } from './Exchanger.js';
 import { BitcoinExchanger } from './Bitcoin.js';
 import { EthereumExchanger } from './Ethereum.js';
@@ -40,20 +41,12 @@ const styles = StyleSheet.create({
 
   heeboRegularFont: {
     fontFamily: "HeeboMedium",
+    fontSize: 36,
   }
 
 });
 
-// var bitcoinExchanger, litecoinExchanger, ethereumExchanger, moneroExchanger;
-//
-// export function loadExchangers() {
-//   bitcoinExchanger = ();
-//   ethereumExchanger = ();
-//   moneroExchanger = ();
-//   litecoinExchanger = (<LitecoinExchanger />);
-// }
-
-export class ExchangerScreen extends Component {
+export default class ExchangerScreen extends Component {
   constructor(props) {
     super(props);
 
@@ -74,13 +67,13 @@ export class ExchangerScreen extends Component {
       return (<BitcoinExchanger />);
 
     if(this.state.chosenCrypto === "btc") {
-      return(<BitcoinExchanger cryptoExchanger={getCryptoExchanger("bitcoin")}/>);
+      return(<BitcoinExchanger cryptoExchanger={CryptoExchanger.getCryptoExchanger("bitcoin")}/>);
     } else if(this.state.chosenCrypto === "eth") {
-      return(<EthereumExchanger cryptoExchanger={getCryptoExchanger("ethereum")}/>);
+      return(<EthereumExchanger cryptoExchanger={CryptoExchanger.getCryptoExchanger("ethereum")}/>);
     } else if(this.state.chosenCrypto === "ltc") {
-      return(<LitecoinExchanger cryptoExchanger={getCryptoExchanger("litecoin")}/>);
+      return(<LitecoinExchanger cryptoExchanger={CryptoExchanger.getCryptoExchanger("litecoin")}/>);
     } else if(this.state.chosenCrypto === "mon") {
-      return(<MoneroExchanger cryptoExchanger={getCryptoExchanger("monero")}/>);
+      return(<MoneroExchanger cryptoExchanger={CryptoExchanger.getCryptoExchanger("monero")}/>);
     }
   }
 
