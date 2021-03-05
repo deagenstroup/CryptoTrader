@@ -319,11 +319,9 @@ export default class Profile extends Component {
 
     this.setState({
       dateCreated: new Date(),
-    });
+    }, () => this.saveValuesToFile());
 
     CryptoExchanger.resetCryptoExchangers();
-
-    this.saveValuesToFile();
   }
 
 

@@ -113,6 +113,7 @@ const NavDrawer = () => {
 export default function App() {
   const [fontsLoaded] = useFonts({
     TitilliumWeb: require("./fonts/TitilliumWeb-Regular.ttf"),
+    TitilliumWebSemiBold: require("./fonts/TitilliumWeb-SemiBold.ttf"),
     Aldrich: require("./fonts/Aldrich-Regular.ttf"),
     HeeboLight: require("./fonts/Heebo-Light.ttf"),
     HeeboRegular: require("./fonts/Heebo-Regular.ttf"),
