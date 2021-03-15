@@ -21,12 +21,11 @@ import { LineChart } from 'react-native-chart-kit';
 import {
   Feather,
   FontAwesome,
-  FontAwesom5,
+  FontAwesome5,
   MaterialCommunityIcons,
   Ionicons,
   Entypo,
 } from '@expo/vector-icons';
-// import { useFonts, Inter_900Black } from '@expo-google-fonts/inter';
 
 const styles = StyleSheet.create({
 
@@ -220,6 +219,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  inputBox: {
+    borderWidth: 2,
+    borderRadius: 5,
+    borderColor: 'rgb(128, 128, 128)',
+    paddingLeft: 6,
+    paddingBottom: 2,
+  },
+
   buttonText: {
     fontFamily: 'HeeboRegular',
     fontSize: 24,
@@ -237,34 +244,6 @@ export function round(value, decimals) {
   if(!isNaN(num))
     return num;
   return 0;
-}
-
-
-
-var graphTimeframe = "7d";
-
-//delete
-/* The amount of dollars the user has, which is the same across all exchanger
-   components */
-var dollars = 100;
-
-/* An array which holds object references to all exchanger components */
-var exchangersArray = [];
-
-/* Forces all of the exchanger objects to re-render their child components to
-   screen */
-export function forceRender() {
-  for(var i = 0; i < exchangersArray.length; i++) {
-    exchangersArray[i].forceUpdate();
-  }
-}
-
-export function updateGraphTimeFrame(inTimeFrame) {
-  graphTimeframe = inTimeFrame;
-
-  for(var i = 0; i < exchangersArray.length; i++) {
-    exchangersArray[i].fetchCoinData();
-  }
 }
 
 export function get7DChartLabels() {
@@ -317,6 +296,41 @@ function get1MChartLabels() {
 /** An abstract component which is used on a screen to exchange a cryptocurrency **/
 export default class ExchangerComponent extends Component {
 
+  // Returns the relevent coin icon for the cryptocurrency with the provided coinID
+  getCoinIcon(inColor) {
+    var inCoinID = this.getCoinID();
+    if(inCoinID == "bitcoin") {
+      return (<FontAwesome name="bitcoin" size={34} color={inColor} />);
+    } else if(inCoinID == "ethereum") {
+      return (<MaterialCommunityIcons name="ethereum" size={34} color={inColor} />);
+    } else if(inCoinID == "litecoin") {
+      return (<MaterialCommunityIcons name="litecoin" size={28} color={inColor} />);
+    } else if(inCoinID == "monero") {
+      return (<FontAwesome5 name="monero" size={28} color={inColor} />);
+    } else {
+      return (<FontAwesome5 name="coins" size={24} color={inColor} />);
+    }
+  }
+
+  static exchanger;
+
+  static graphTimeframe = "7d";
+
+  static reinitalizeValues(inCryptoExchanger) {
+    ExchangerComponent.exchanger.reinitalizeValues(inCryptoExchanger);
+    ExchangerComponent.exchanger.forceUpdate();
+  }
+
+  static forceUpdate() {
+    ExchangerComponent.exchanger.forceUpdate();
+  }
+
+  static updateGraphTimeFrame(inTimeFrame) {
+    ExchangerComponent.graphTimeframe = inTimeFrame;
+
+    ExchangerComponent.exchanger.fetchCoinData();
+  }
+
   constructor(props) {
     super(props);
 
@@ -346,13 +360,13 @@ export default class ExchangerComponent extends Component {
     this.exchangeCurrency.bind(this);
     this.getCoinExchangeMode.bind(this);
 
-    exchangersArray.push(this);
+    ExchangerComponent.exchanger = this;
   }
 
   /** Called when the component is mounted into the GUI heiarchy **/
   componentDidMount() {
-    this.fetchCoinPrice();
     this.fetchCoinData();
+    // CryptoExchanger.saveCryptoExchangers();
   }
 
   /** Abstract method which is to be overwritten by subclasses, getting the
@@ -362,24 +376,24 @@ export default class ExchangerComponent extends Component {
   /** Fetchs data about the cryptocurrency with the supplied name and applies
       the data to the graph in the Exchanger based on the graph's mode (7d, 24h, 1m) **/
   fetchCoinData() {
-    var url = "https://api.coingecko.com/api/v3/coins/" + this.getCoinName()   + "/market_chart?vs_currency=usd&";
+    var url = "https://api.coingecko.com/api/v3/coins/" + this.getCoinID()   + "/market_chart?vs_currency=usd&";
 
-    if(graphTimeframe === "7d") {
+    if(ExchangerComponent.graphTimeframe === "7d") {
       url = url + "days=7&interval=daily";
-    } else if(graphTimeframe === "24h") {
+    } else if(ExchangerComponent.graphTimeframe === "24h") {
       url = url + "&days=1&interval=hourly";
-    } else if(graphTimeframe === "1m") {
+    } else if(ExchangerComponent.graphTimeframe === "1m") {
       url = url + "&days=1&interval=hourly";
     }
 
     fetch(url)
       .then((response) => response.json())
       .then((json) => {
-        if(graphTimeframe === "7d") {
+        if(ExchangerComponent.graphTimeframe === "7d") {
           this.parse7DCoinData(json);
-        } else if(graphTimeframe === "24h") {
+        } else if(ExchangerComponent.graphTimeframe === "24h") {
           this.parse24HCoinData(json);
-        } else if(graphTimeframe === "1m") {
+        } else if(ExchangerComponent.graphTimeframe === "1m") {
           this.parse1MCoinData(json);
         }
       })
@@ -464,8 +478,8 @@ export default class ExchangerComponent extends Component {
     return this.state.coinExchangeMode;
   }
 
-  getCoinFileName() {
-    return this.getCoinName() + ".txt";
+  getCoinID() {
+    return this.state.cryptoExchanger.getCoinID();
   }
 
   getCoinName() {
@@ -589,13 +603,9 @@ export default class ExchangerComponent extends Component {
     }
   }
 
-  getCoinIcon(inColor) {
-    if(isNaN(inColor))
-      return (<FontAwesome name="bitcoin" size={32} color="black" />);
-    else {
-      return (<FontAwesome name="bitcoin" size={32} color={inColor} />);
-    }
-  }
+  // getCoinIcon(inColor) {
+  //   ExchangerComponent.getCoinIcon(this.getCoinID(), inColor);
+  // }
 
   getCurrencyExchangeBox() {
     if(this.state.exchangeMode != null) {
@@ -683,7 +693,7 @@ export default class ExchangerComponent extends Component {
               </Text>
             </TouchableOpacity>
             <TextInput
-              style={[styles.textInputMargin, styles.webFont, styles.wide]}
+              style={[styles.textInputMargin, styles.webFont, styles.wide, styles.inputBox]}
               keyboardType="decimal-pad"
               onChangeText={text => this.updateInputText(text)}
               placeholder="0"
@@ -696,6 +706,19 @@ export default class ExchangerComponent extends Component {
   }
 
 
+  reinitalizeValues(inCryptoExchanger) {
+    this.setState({
+      cryptoExchanger: inCryptoExchanger,
+      isChartDataLoaded: false,
+      exchangeMode: null,
+      coinExchangeMode: true,
+      inputText: "",
+      chartData: null,
+    }, () => {
+      this.fetchCoinData();
+      this.forceUpdate();
+    });
+  }
 
   setChartData(inData) {
     this.setState({
@@ -737,13 +760,13 @@ export default class ExchangerComponent extends Component {
 
     this.updateInputText("");
 
-    forceRender();
+    ExchangerComponent.forceUpdate();
   }
 
 
 
   render () {
-    if(!this.state.cryptoExchanger.isPriceLoaded() || !this.state.cryptoExchanger.areValuesLoaded()) {
+    if(this.state.cryptoExchanger == null || !this.state.cryptoExchanger.isPriceLoaded() || !this.state.cryptoExchanger.areValuesLoaded()) {
       return <AppLoading />;
     } else {
       return (

@@ -12,11 +12,13 @@ import {
   Picker,
 } from 'react-native';
 
+import AppLoading from 'expo-app-loading';
+
 // import { Picker } from '@react-native-picker/picker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 import CryptoExchanger from "./CryptoExchanger.js";
-import { Exchanger, updateGraphTimeFrame } from './Exchanger.js';
+import  ExchangerComponent from './Exchanger.js';
 import { BitcoinExchanger } from './Bitcoin.js';
 import { EthereumExchanger } from './Ethereum.js';
 import { LitecoinExchanger } from './Litecoin.js';
@@ -113,7 +115,6 @@ const PickerModal = (props) => {
 
       <View style={styles.centeredContainer}>
         <View style={styles.dialogContainer}>
-          <View>
           {
             props.optionsArray.map((label, i) => (
               <TouchableOpacity
@@ -126,7 +127,6 @@ const PickerModal = (props) => {
               )
             )
           }
-          </View>
         </View>
       </View>
 
@@ -135,14 +135,25 @@ const PickerModal = (props) => {
 }
 
 export default class ExchangerScreen extends Component {
+
+  static exchangerScreen;
+
+  static forceUpdate() {
+    ExchangerScreen.exchangerScreen.forceUpdate();
+  }
+
+  /** Resets the chosen cryptocurrency to the first available one. **/
+  static resetChosenCrypto() {
+    if(ExchangerScreen.exchangerScreen != null)
+      ExchangerScreen.exchangerScreen.resetChosenCrypto();
+  }
+
   constructor(props) {
     super(props);
 
-    console.log("ExchangerScreen initialized...");
-
     this.state = {
       /** The type of crypto which the user is currently exchanging **/
-      chosenCrypto: 'Bitcoin',
+      chosenCryptoName: CryptoExchanger.getFirstCryptoExchanger().getCoinName(),
 
       graphTimeframe: '7d',
 
@@ -151,27 +162,23 @@ export default class ExchangerScreen extends Component {
       graphPickerModalVisible: false,
     }
 
-    exchangerScreen = this;
+    ExchangerScreen.exchangerScreen = this;
   }
 
-  getExchanger() {
-    if(this.state.chosenCrypto == null)
-      return (<BitcoinExchanger />);
 
-    if(this.state.chosenCrypto === "Bitcoin") {
-      return(<BitcoinExchanger cryptoExchanger={CryptoExchanger.getCryptoExchanger("bitcoin")}/>);
-    } else if(this.state.chosenCrypto === "Ethereum") {
-      return(<EthereumExchanger cryptoExchanger={CryptoExchanger.getCryptoExchanger("ethereum")}/>);
-    } else if(this.state.chosenCrypto === "Litecoin") {
-      return(<LitecoinExchanger cryptoExchanger={CryptoExchanger.getCryptoExchanger("litecoin")}/>);
-    } else if(this.state.chosenCrypto === "Monero") {
-      return(<MoneroExchanger cryptoExchanger={CryptoExchanger.getCryptoExchanger("monero")}/>);
-    }
+  getChosenCryptoName() {
+    return this.state.chosenCryptoName;
+  }
+
+  getChosenCryptoExchanger() {
+    return CryptoExchanger.getCryptoExchangerByName(this.state.chosenCryptoName);
   }
 
   getGraphTimeframe() {
     return graphTimeframe;
   }
+
+
 
   setCoinPickerModalVisible(inVisible) {
     this.setState({coinPickerModalVisible: inVisible});
@@ -181,22 +188,30 @@ export default class ExchangerScreen extends Component {
     this.setState({graphPickerModalVisible: inVisible});
   }
 
-  setChosenCrypto(inCrypto) {
+  setChosenCryptoName(inCryptoName) {
     this.setState({
-      chosenCrypto: inCrypto,
+      chosenCryptoName: inCryptoName,
+    }, () => {
+      ExchangerComponent.reinitalizeValues(this.getChosenCryptoExchanger());
     });
   }
 
   setGraphTimeframe(inGraphtimeframe) {
-    this.setState({graphTimeframe: inGraphtimeframe}, () => updateGraphTimeFrame(inGraphtimeframe));
+    this.setState({graphTimeframe: inGraphtimeframe}, () => ExchangerComponent.updateGraphTimeFrame(inGraphtimeframe));
   }
+
+  resetChosenCrypto() {
+    this.setState({chosenCryptoName: CryptoExchanger.getFirstCryptoExchanger().getCoinName()});
+  }
+
+
 
   getCoinPickerButton() {
     return (<TouchableOpacity
               style={styles.basicButton}
               onPress={() => this.setCoinPickerModalVisible(true)} >
               <View style={styles.buttonInsideContainer} >
-                <Text style={styles.webFontSemiBold}>{this.state.chosenCrypto}</Text>
+                <Text style={styles.webFontSemiBold}>{this.getChosenCryptoName()}</Text>
               </View>
             </TouchableOpacity> );
   }
@@ -213,9 +228,9 @@ export default class ExchangerScreen extends Component {
 
   getCoinPickerModal() {
     return (<PickerModal
-              optionsArray={["Bitcoin", "Ethereum", "Litecoin", "Monero"]}
+              optionsArray={CryptoExchanger.getCryptoNameList()}
               onOptionSelected={(selectedOption) => {
-                this.setChosenCrypto(selectedOption);
+                this.setChosenCryptoName(selectedOption);
                 this.setCoinPickerModalVisible(false);
               }}
               visible={this.state.coinPickerModalVisible}
@@ -245,7 +260,12 @@ export default class ExchangerScreen extends Component {
             );
   }
 
+
+
   render() {
+    if(this.state.chosenCryptoName == null || CryptoExchanger.getCryptoExchangerByName(this.state.chosenCryptoName) == null) {
+      return <AppLoading />;
+    }
     return (
       <KeyboardAwareScrollView
         contentContainerStyle={ styles.largeColumnBox }
@@ -257,7 +277,7 @@ export default class ExchangerScreen extends Component {
           { this.getGraphPickerButton() }
         </View>
 
-        { this.getExchanger() }
+        <ExchangerComponent cryptoExchanger={CryptoExchanger.getCryptoExchangerByName(this.state.chosenCryptoName)} />
 
         { this.getCoinPickerModal() }
 

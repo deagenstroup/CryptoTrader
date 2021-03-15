@@ -1,11 +1,14 @@
 import * as FileSystem from 'expo-file-system';
 
 import Profile from "./Profile.js";
-import { forceRender } from './Exchanger.js';
+import ExchangerScreen from "./ExchangerScreen.js"
+// import ExchangerComponent from './Exchanger.js';
 
 
 /** Logical exchanging class used for exchanging a single cryptocurrency **/
 export default class CryptoExchanger {
+
+  static areCryptosLoaded = false;
 
   /* The amount of dollars the user has, which is the same across all exchanger
      components */
@@ -15,11 +18,34 @@ export default class CryptoExchanger {
       apps launch and handle all of the logic operations of exchanging the currency **/
   static cryptoExchangerArray = [];
 
-  static cryptoExchangerArrayLength = 4;
+  static cryptoExchangerArrayLength = 0;
 
 
 
-  static getCryptoExchanger(inCoinName) {
+  static getDollars() {
+    return CryptoExchanger.dollars;
+  }
+
+  static getFirstCryptoExchanger() {
+    if(CryptoExchanger.cryptoExchangerArrayLength == 0)
+      return null;
+    return CryptoExchanger.cryptoExchangerArray[0];
+  }
+
+  /** Takes in the ID of a cryptocurrency and returns the CryptoExchanger object
+      which handles that currency **/
+  static getCryptoExchanger(inCoinID) {
+    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
+      if(CryptoExchanger.cryptoExchangerArray[i].getCoinID() === inCoinID) {
+        return CryptoExchanger.cryptoExchangerArray[i];
+      }
+    }
+    return null;
+  }
+
+  /** Takes in the name of a cryptocurrency and returns the CryptoExchanger object
+      which handles that currency **/
+  static getCryptoExchangerByName(inCoinName) {
     for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
       if(CryptoExchanger.cryptoExchangerArray[i].getCoinName() === inCoinName) {
         return CryptoExchanger.cryptoExchangerArray[i];
@@ -27,7 +53,10 @@ export default class CryptoExchanger {
     }
   }
 
-  static getCryptoPercentageDataArray() {
+
+  /** Returns an array filled with the names and dollar values of all the
+      cryptocurrencies currently in memory **/
+  static getCryptoValueArray() {
     var coinArray = [];
     for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
       coinArray.push({
@@ -36,10 +65,6 @@ export default class CryptoExchanger {
       });
     }
     return coinArray;
-  }
-
-  static getDollars() {
-    return CryptoExchanger.dollars;
   }
 
   static getTotalCurrentNetValue() {
@@ -54,10 +79,44 @@ export default class CryptoExchanger {
     return totalValue;
   }
 
+  static getCryptoNameList() {
+    var nameArray = [];
+    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
+      nameArray.push(CryptoExchanger.cryptoExchangerArray[i].getCoinName());
+    }
+    return nameArray;
+  }
+
 
   static setDollars(inDollars) {
     CryptoExchanger.dollars = inDollars;
     CryptoExchanger.saveDollarsToFile(inDollars);
+  }
+
+  static addCryptoExchanger(inCryptoID, inCryptoName) {
+    var newExchanger = new CryptoExchanger(inCryptoID, inCryptoName, false);
+    CryptoExchanger.cryptoExchangerArray.push(newExchanger);
+    CryptoExchanger.cryptoExchangerArrayLength++;
+    newExchanger.fetchCoinPrice();
+    newExchanger.saveCoinsToFile();
+    CryptoExchanger.saveCryptoList()
+      .catch((error) => console.log("There was an error saving crypto list..."))
+      .then(console.log("crypto list saved successfully"));
+    // newExchanger.saveValuesToFile();
+    // CryptoExchanger.saveCryptoList();
+  }
+
+  static removeCryptoExchanger(inCryptoID) {
+    console.log("removing crypto with id " + inCryptoID);
+    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
+      if(inCryptoID == CryptoExchanger.cryptoExchangerArray[i].getCoinID()) {
+        CryptoExchanger.cryptoExchangerArray.splice(i, 1);
+        CryptoExchanger.cryptoExchangerArrayLength--;
+        break;
+      }
+    }
+    ExchangerScreen.resetChosenCrypto();
+    Profile.forceProfileUpdate();
   }
 
   static resetCryptoExchangers() {
@@ -65,30 +124,72 @@ export default class CryptoExchanger {
     for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
       CryptoExchanger.cryptoExchangerArray[i].reset();
     }
-    forceRender();
+    // ExchangerComponent.forceUpdate();
   }
 
 
   static async loadCryptoExchangers() {
-    CryptoExchanger.cryptoExchangerArray.push(new CryptoExchanger("bitcoin"));
-    CryptoExchanger.cryptoExchangerArray.push(new CryptoExchanger("ethereum"));
-    CryptoExchanger.cryptoExchangerArray.push(new CryptoExchanger("litecoin"));
-    CryptoExchanger.cryptoExchangerArray.push(new CryptoExchanger("monero"));
-    console.log("crytpoExchangerArrayLength: " + CryptoExchanger.cryptoExchangerArrayLength);
+    if(CryptoExchanger.areCryptosLoaded)
+      return;
+
+    var cryptoList = await CryptoExchanger.getCryptoListFromFile();
+    for(var i = 0; i < cryptoList.length; i++) {
+      CryptoExchanger.cryptoExchangerArray.push(new CryptoExchanger(cryptoList[i], null, true));
+      CryptoExchanger.cryptoExchangerArrayLength = CryptoExchanger.cryptoExchangerArrayLength + 1;
+    }
 
     for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
       await CryptoExchanger.cryptoExchangerArray[i].loadValuesFromFile();
       await CryptoExchanger.cryptoExchangerArray[i].fetchCoinPrice();
-      console.log(CryptoExchanger.cryptoExchangerArray[i]);
     }
+
+    CryptoExchanger.areCryptosLoaded = true;
+  }
+
+  static async saveCryptoExchangers() {
+    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
+      await CryptoExchanger.cryptoExchangerArray[i].saveValuesToFile();
+    }
+    await CryptoExchanger.saveCryptoList();
+  }
+
+  static async saveCryptoList() {
+    await FileSystem.deleteAsync(
+      FileSystem.documentDirectory + "cryptolist.txt",
+      { idempotent: true }
+    );
+    var nameArray = [];
+    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
+      nameArray.push(CryptoExchanger.cryptoExchangerArray[i].getCoinID());
+    }
+    await FileSystem.writeAsStringAsync(
+      FileSystem.documentDirectory + "cryptolist.txt",
+      JSON.stringify(nameArray),
+      { encoding: FileSystem.EncodingType.UTF8 }
+    );
+  }
+
+  /** Returns an array of strings with the names of all the cryptocurrencies which
+      the user has in their porfolio **/
+  static async getCryptoListFromFile() {
+    let fileString = await FileSystem.readAsStringAsync(
+      FileSystem.documentDirectory + "cryptolist.txt",
+      { encoding: FileSystem.EncodingType.UTF8 }
+    );
+    var cryptoList = JSON.parse(fileString);
+    return cryptoList;
   }
 
 
 
-  constructor(inCoinName) {
 
-    /** The all lowercase identifier of the cryptocurrency **/
+
+  constructor(inCoinID, inCoinName, inWaitForLoad) {
+
     this.coinName = inCoinName;
+
+    // A unique identifier of the coin
+    this.coinID = inCoinID;
 
     /** The amount of respective cryptocurrency that the user owns. **/
     this.coin = 0;
@@ -102,32 +203,20 @@ export default class CryptoExchanger {
 
     /** If true, the amount of coins and dollars the user has has been loaded
         into the object from file **/
-    this.valuesLoaded = false;
+    this.valuesLoaded = !inWaitForLoad;
   }
 
   /** Opens a connection to CoinGecko and gets the current market price of the coin **/
   async fetchCoinPrice() {
-    await fetch("https://api.coingecko.com/api/v3/simple/price?ids=" + this.getCoinName() + "&vs_currencies=usd")
+    await fetch("https://api.coingecko.com/api/v3/simple/price?ids=" + this.getCoinID() + "&vs_currencies=usd")
       .then((response) => response.json())
       .then((json) => {
-        this.coinPrice = CryptoExchanger.parseCoinPrice(json, this.getCoinName());
+        this.coinPrice = json[this.getCoinID()]["usd"];
       })
       .catch((error) => console.error(error))
       .finally(() => {
         this.priceLoaded = true;
       });
-  }
-
-  static parseCoinPrice(json, inCoinName) {
-    if(inCoinName === "bitcoin") {
-      return json.bitcoin.usd;
-    } else if(inCoinName === "ethereum") {
-      return json.ethereum.usd;
-    } else if(inCoinName === "litecoin") {
-      return json.litecoin.usd;
-    } else if(inCoinName === "monero") {
-      return json.monero.usd;
-    }
   }
 
 
@@ -137,11 +226,17 @@ export default class CryptoExchanger {
   }
 
   getCoinName() {
+    if(this.coinName == null)
+      return this.coinID;
     return this.coinName;
   }
 
-  getCoinFileName() {
-    return "new_" + this.getCoinName() + ".txt";
+  getCoinID() {
+    return this.coinID;
+  }
+
+  getCoinFilename() {
+    return this.getCoinID() + ".txt";
   }
 
   getCoinPrice() {
@@ -275,11 +370,13 @@ export default class CryptoExchanger {
 
   async saveCoinsToFile(coinAmount) {
     var fileObj = {
+      // coinName: this.getCoinID().substring(0, 1).toUpperCase() + this.getCoinID().substring(1, this.getCoinID().length),
+      coinName: this.getCoinName(),
       fileCoins: coinAmount,
     };
 
     await FileSystem.writeAsStringAsync(
-      FileSystem.documentDirectory + this.getCoinFileName(),
+      FileSystem.documentDirectory + this.getCoinFilename(),
       JSON.stringify(fileObj),
       { encoding: FileSystem.EncodingType.UTF8 }
     );
@@ -297,19 +394,25 @@ export default class CryptoExchanger {
 
   async loadCoinsFromFile() {
     let fileString = await FileSystem.readAsStringAsync(
-      FileSystem.documentDirectory + this.getCoinFileName(),
+      FileSystem.documentDirectory + this.getCoinFilename(),
       { encoding: FileSystem.EncodingType.UTF8 }
     );
 
     var fileObj = JSON.parse(fileString);
 
-    this.coin = fileObj.fileCoins;
+    if(fileObj.fileCoins != null)
+      this.coin = fileObj.fileCoins;
+
+    if(fileObj.coinName != null)
+      this.coinName = fileObj.coinName;
+
+
   }
 
 
 
   toString() {
-    return this.coinName + ": " + this.coin + ", " + this.valuesLoaded + ", " + this.coinPrice + ", $" + CryptoExchanger.dollars + "\n";
+    return this.coinName + "(" + this.coinID + "): " + this.coin + ", " + this.valuesLoaded + ", " + this.coinPrice + ", $" + CryptoExchanger.dollars + "\n";
   }
 
 }

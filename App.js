@@ -7,7 +7,7 @@ import { Feather } from '@expo/vector-icons';
 
 /* components imported from React */
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, LogBox } from 'react-native';
 
 /* components imported from the React-Navigation library */
 import { NavigationContainer } from '@react-navigation/native';
@@ -22,7 +22,9 @@ import {
 import CryptoExchanger from "./CryptoExchanger.js";
 import Profile from "./Profile.js";
 import ExchangerScreen from "./ExchangerScreen.js";
+import CoinSearchScreen from "./CoinSearchScreen.js";
 
+LogBox.ignoreAllLogs()
 
 
 const styles = StyleSheet.create({
@@ -104,6 +106,15 @@ const NavDrawer = () => {
             }}
           />
 
+        <Drawer.Screen
+          name="coin-search-screen"
+          component={CoinSearchScreen}
+          options={{
+            drawerLabel: "Search",
+            headerTitle: "Crypto Search",
+          }}
+          />
+
     </Drawer.Navigator>
   );
 }
@@ -122,12 +133,18 @@ export default function App() {
 
   const [cryptoLoaded, setCryptoLoaded] = useState(false);
   const [cryptoPriceLoaded, setCryptoPriceLoaded] = useState(false);
+  const [loadThreadStarted, setLoadThreadStarted] = useState(false);
 
-  CryptoExchanger.loadCryptoExchangers()
-    .catch((error) => console.log("There was an error loading crypto exchangers..."))
-    .then(() => {
-      setCryptoLoaded(true);
-    });
+  if(!loadThreadStarted) {
+    setLoadThreadStarted(true);
+    CryptoExchanger.loadCryptoExchangers()
+      .catch((error) => console.log("There was an error loading crypto exchangers..."))
+      .then(() => {
+        setCryptoLoaded(true);
+        // CryptoExchanger.saveCryptoExchangers();
+      });
+  }
+
 
 
   if(!fontsLoaded || !cryptoLoaded) {

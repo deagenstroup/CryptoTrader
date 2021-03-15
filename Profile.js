@@ -19,6 +19,7 @@ import { PieChart } from 'react-native-chart-kit';
 // import { Modal, ModalContent, ModalPortal } from 'react-native-modals';
 
 import CryptoExchanger from "./CryptoExchanger.js";
+import ExchangerComponent from "./Exchanger.js";
 
 function round(value, decimals) {
   var num = Number(Math.trunc(value+'e'+decimals)+'e-'+decimals);
@@ -236,7 +237,7 @@ export default class Profile extends Component {
   }
 
   getPieChartData() {
-    var data = CryptoExchanger.getCryptoPercentageDataArray();
+    var data = CryptoExchanger.getCryptoValueArray();
     var colorGradient = 255 / data.length;
     var color = 0;
     for(var i = 0; i < data.length; i++) {
@@ -322,6 +323,7 @@ export default class Profile extends Component {
     }, () => this.saveValuesToFile());
 
     CryptoExchanger.resetCryptoExchangers();
+    ExchangerComponent.forceUpdate();
   }
 
 
