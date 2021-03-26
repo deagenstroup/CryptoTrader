@@ -4,6 +4,12 @@ import Profile from "./Profile.js";
 import ExchangerScreen from "./ExchangerScreen.js"
 // import ExchangerComponent from './Exchanger.js';
 
+function round(value, decimals) {
+  var num = Number(Math.trunc(value+'e'+decimals)+'e-'+decimals);
+  if(!isNaN(num))
+     return num;
+  return 0;
+}
 
 /** Logical exchanging class used for exchanging a single cryptocurrency **/
 export default class CryptoExchanger {
@@ -19,6 +25,14 @@ export default class CryptoExchanger {
   static cryptoExchangerArray = [];
 
   static cryptoExchangerArrayLength = 0;
+
+  /** The total amount of dollars spent buying the cryptocurrencies that have
+      been removed from the portfolio **/
+  static removedDollarBoughtVolume = 0;
+
+  /** The total amount of dollars that have been made selling the cryptocurrencies
+      that have been removed from the portfolio **/
+  static removedDollarSoldVolume = 0;
 
 
 
@@ -79,6 +93,33 @@ export default class CryptoExchanger {
     return totalValue;
   }
 
+  static getNetWorthList() {
+    var netWorthArray = [];
+    CryptoExchanger.cryptoExchangerArray.map( (cryptoObj, i, arr) => {
+      netWorthArray[i] = round(cryptoObj.getCurrentValue(), 2);
+    });
+    return netWorthArray;
+  }  
+
+  static getProfitList() {
+    var profitArray = [];
+    CryptoExchanger.cryptoExchangerArray.map( (cryptoObj, i, arr) => {
+      profitArray[i] = cryptoObj.getNetProfit();
+    });
+    return profitArray;
+  }
+
+  static getTotalProfit() {
+    var totalDollarBoughtVolume = this.removedDollarBoughtVolume;
+    var totalDollarSoldVolume = this.removedDollarSoldVolume;
+    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
+      totalDollarBoughtVolume += CryptoExchanger.cryptoExchangerArray[i].dollarBoughtVolume;
+      totalDollarSoldVolume += CryptoExchanger.cryptoExchangerArray[i].dollarSoldVolume;
+    }
+    console.log("totalDollarSoldVolume: " + totalDollarSoldVolume + ", totalDollarBoughtVolume: " + totalDollarBoughtVolume);
+    return totalDollarSoldVolume - totalDollarBoughtVolume;
+  }
+
   static getCryptoNameList() {
     var nameArray = [];
     for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
@@ -99,6 +140,7 @@ export default class CryptoExchanger {
     CryptoExchanger.cryptoExchangerArrayLength++;
     newExchanger.fetchCoinPrice();
     newExchanger.saveCoinsToFile();
+    Profile.forceProfileUpdate();
     CryptoExchanger.saveCryptoList()
       .catch((error) => console.log("There was an error saving crypto list..."))
       .then(console.log("crypto list saved successfully"));
@@ -107,16 +149,24 @@ export default class CryptoExchanger {
   }
 
   static removeCryptoExchanger(inCryptoID) {
-    console.log("removing crypto with id " + inCryptoID);
+    var removedCryptoExchanger;
     for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
       if(inCryptoID == CryptoExchanger.cryptoExchangerArray[i].getCoinID()) {
-        CryptoExchanger.cryptoExchangerArray.splice(i, 1);
+        removedCryptoExchanger = CryptoExchanger.cryptoExchangerArray.splice(i, 1);
+        removedCryptoExchanger[0].sellCrypto(removedCryptoExchanger[0].getCoin(), false);
         CryptoExchanger.cryptoExchangerArrayLength--;
         break;
       }
     }
+    CryptoExchanger.removedDollarBoughtVolume += removedCryptoExchanger[0].dollarBoughtVolume;
+    CryptoExchanger.removedDollarSoldVolume += removedCryptoExchanger[0].dollarSoldVolume;
+    console.log("removedDollarSoldVolume: " + CryptoExchanger.removedDollarSoldVolume + ", removedDollarBoughtVolume" + CryptoExchanger.removedDollarBoughtVolume);
+    CryptoExchanger.saveDollarVolumes();
     ExchangerScreen.resetChosenCrypto();
     Profile.forceProfileUpdate();
+    CryptoExchanger.saveCryptoList()
+      .catch((error) => console.log("There was an error saving crypto list..."))
+      .then(console.log("crypto list saved successfully"));
   }
 
   static resetCryptoExchangers() {
@@ -141,9 +191,29 @@ export default class CryptoExchanger {
     for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
       await CryptoExchanger.cryptoExchangerArray[i].loadValuesFromFile();
       await CryptoExchanger.cryptoExchangerArray[i].fetchCoinPrice();
+      console.log(CryptoExchanger.cryptoExchangerArray[i]);
     }
 
+    try {
+      await CryptoExchanger.loadDollarVolumes();
+      console.log("removedDollarSoldVolume: " + CryptoExchanger.removedDollarSoldVolume + ", removedDollarBoughtVolume" + CryptoExchanger.removedDollarBoughtVolume);
+    } catch(error) {
+      console.log("Error loading removed dollar volumes...");
+    }
+
+
     CryptoExchanger.areCryptosLoaded = true;
+  }
+
+  static async loadDollarVolumes() {
+    let fileObj = JSON.parse(await FileSystem.readAsStringAsync(
+      FileSystem.documentDirectory + "cryptolist.txt",
+      { encoding: FileSystem.EncodingType.UTF8 }
+    ));
+    if(fileObj.removedDollarBoughtVolume != null)
+      this.removedDollarBoughtVolume = fileObj.removedDollarBoughtVolume;
+    if(fileObj.removedDollarSoldVolume != null)
+      this.removedDollarSoldVolume = fileObj.removedDollarSoldVolume;
   }
 
   static async saveCryptoExchangers() {
@@ -165,6 +235,19 @@ export default class CryptoExchanger {
     await FileSystem.writeAsStringAsync(
       FileSystem.documentDirectory + "cryptolist.txt",
       JSON.stringify(nameArray),
+      { encoding: FileSystem.EncodingType.UTF8 }
+    );
+  }
+
+  static async saveDollarVolumes() {
+    var fileObj = {
+      removedDollarBoughtVolume: this.removedDollarBoughtVolume,
+      removedDollarSoldVolume: this.removedDollarSoldVolume,
+    }
+
+    await FileSystem.writeAsStringAsync(
+      FileSystem.documentDirectory + "cryptolist.txt",
+      JSON.stringify(fileObj),
       { encoding: FileSystem.EncodingType.UTF8 }
     );
   }
@@ -197,6 +280,12 @@ export default class CryptoExchanger {
     /** The price of a single unit of cryptocurrency, in dollars **/
     this.coinPrice = 1000;
 
+    /** The total amount of dollars spent buying the cryptocurrency **/
+    this.dollarBoughtVolume = 0;
+
+    /** The total amount of dollars that have been made selling the cryptocurrency **/
+    this.dollarSoldVolume = 0;
+
     /** If true, the price of the coin has been loaded from the web into
         the object **/
     this.priceLoaded = false;
@@ -216,6 +305,7 @@ export default class CryptoExchanger {
       .catch((error) => console.error(error))
       .finally(() => {
         this.priceLoaded = true;
+        this.coinPrice = this.coinPrice*2;
       });
   }
 
@@ -266,6 +356,10 @@ export default class CryptoExchanger {
     return currentValue;
   }
 
+  getNetProfit() {
+    return this.dollarSoldVolume - this.dollarBoughtVolume;
+  }
+
   areValuesLoaded() {
     return this.valuesLoaded;
   }
@@ -278,7 +372,7 @@ export default class CryptoExchanger {
 
   setCoin(inCoin) {
     this.coin = inCoin;
-    this.saveCoinsToFile(inCoin);
+    this.saveCoinsToFile();
   }
 
   /** Buy inAmount of crypto or the equivalent amount of dollars worth of crypto
@@ -300,6 +394,14 @@ export default class CryptoExchanger {
 
     this.coin = newCoinAmount;
     CryptoExchanger.dollars = newDollarAmount;
+    if(inDollarsWorth) {
+      this.dollarBoughtVolume += inAmount;
+    } else {
+      this.dollarBoughtVolume += this.getDollarExchangeValue(inAmount);
+    }
+
+    console.log(this);
+    console.log("Net Profit: " + this.getNetProfit());
 
     this.saveValuesToFile()
       .catch((error) => console.error(error))
@@ -324,6 +426,14 @@ export default class CryptoExchanger {
 
     this.coin = newCoinAmount;
     CryptoExchanger.dollars = newDollarAmount;
+    if(inDollarsWorth) {
+      this.dollarSoldVolume += inAmount;
+    } else {
+      this.dollarSoldVolume += this.getDollarExchangeValue(inAmount);
+    }
+
+    console.log(this);
+    console.log("Net Profit: " + this.getNetProfit());
 
     this.saveValuesToFile()
       .catch((error) => console.error(error))
@@ -344,7 +454,7 @@ export default class CryptoExchanger {
     await CryptoExchanger.loadDollarsFromFile()
       .catch((error) => {CryptoExchanger.dollars = 0;});
     await this.loadCoinsFromFile()
-      .catch((error) => {this.coin = 0;})
+      .catch((error) => console.log("Error loading coin values from file..."))
       .finally(() => {
         this.valuesLoaded = true;
       });
@@ -353,7 +463,7 @@ export default class CryptoExchanger {
   // Saves the amount of dollars and coins that the user currently has to file
   async saveValuesToFile() {
     CryptoExchanger.saveDollarsToFile(CryptoExchanger.dollars);
-    this.saveCoinsToFile(this.coin);
+    this.saveCoinsToFile();
   }
 
   static async saveDollarsToFile(dollarAmount) {
@@ -368,11 +478,13 @@ export default class CryptoExchanger {
     );
   }
 
-  async saveCoinsToFile(coinAmount) {
+  async saveCoinsToFile() {
     var fileObj = {
       // coinName: this.getCoinID().substring(0, 1).toUpperCase() + this.getCoinID().substring(1, this.getCoinID().length),
       coinName: this.getCoinName(),
-      fileCoins: coinAmount,
+      coin: this.coin,
+      dollarBoughtVolume: this.dollarBoughtVolume,
+      dollarSoldVolume: this.dollarSoldVolume,
     };
 
     await FileSystem.writeAsStringAsync(
@@ -400,19 +512,24 @@ export default class CryptoExchanger {
 
     var fileObj = JSON.parse(fileString);
 
-    if(fileObj.fileCoins != null)
-      this.coin = fileObj.fileCoins;
+    if(fileObj.coin != null)
+      this.coin = fileObj.coin;
 
     if(fileObj.coinName != null)
       this.coinName = fileObj.coinName;
 
+    if(fileObj.dollarBoughtVolume != null)
+      this.dollarBoughtVolume = fileObj.dollarBoughtVolume;
 
+    if(fileObj.dollarSoldVolume != null)
+      this.dollarSoldVolume = fileObj.dollarSoldVolume;
   }
 
 
 
   toString() {
-    return this.coinName + "(" + this.coinID + "): " + this.coin + ", " + this.valuesLoaded + ", " + this.coinPrice + ", $" + CryptoExchanger.dollars + "\n";
+    return this.coinName + "(" + this.coinID + "): " + this.coin + ", " + this.coinPrice + ", +$" + this.dollarBoughtVolume + ", -$" + this.dollarSoldVolume + "\n"
+           + this.valuesLoaded + ", $" + CryptoExchanger.dollars + "\n";
   }
 
 }

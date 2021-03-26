@@ -19,10 +19,6 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 
 import CryptoExchanger from "./CryptoExchanger.js";
 import  ExchangerComponent from './Exchanger.js';
-import { BitcoinExchanger } from './Bitcoin.js';
-import { EthereumExchanger } from './Ethereum.js';
-import { LitecoinExchanger } from './Litecoin.js';
-import { MoneroExchanger } from './Monero.js';
 
 const styles = StyleSheet.create({
   largeColumnBox: {

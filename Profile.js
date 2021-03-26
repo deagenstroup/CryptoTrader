@@ -3,6 +3,7 @@ import React, { Component } from 'react';
 import {
   Modal,
   StyleSheet,
+  ScrollView,
   View,
   Text,
   TouchableOpacity,
@@ -33,13 +34,18 @@ const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
     flexDirection: 'column',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
+    //justifyContent: 'flex-start',
+    //alignItems: 'center',
 
     backgroundColor: 'white',
 
     // borderWidth: 2,
     // borderColor: 'blue',
+  },
+
+  screenContainerContent: {
+    justifyContent: 'flex-start',
+    alignItems: 'center',
   },
 
   subcontainerSpacer: {
@@ -196,6 +202,35 @@ export default class Profile extends Component {
     console.log("Forcing profile update...");
   }
 
+  // Takes in an array of objects with the names and dollar values of cryptocurrencies, 
+  // orders them in descending order based on their value, and combines all currencies
+  // below the top four into an "other" category for use in profile pie chart
+  static formatCryptoValueArray(cryptoArray) {
+     // Selection sort the array into descending order based on value
+    var i, j, max; 
+    for(i = 0; i < cryptoArray.length-1; i++) {
+      max = i;
+      for(j = i+1; j < cryptoArray.length; j++) {
+        if(cryptoArray[j].population > cryptoArray[max].population) {
+          max = j;
+        }
+      }
+      var swap = cryptoArray[i];
+      cryptoArray[i] = cryptoArray[max];
+      cryptoArray[max] = swap;
+    }
+
+    if(cryptoArray.length > 4) {
+      while(cryptoArray.length > 5) {
+        cryptoArray[4].population += cryptoArray[5].population;
+        cryptoArray.splice(5, 1);
+      }
+      cryptoArray[4].name = "Other";
+    } 
+
+    return cryptoArray;
+  }  
+
   constructor(props) {
     super(props);
 
@@ -237,7 +272,7 @@ export default class Profile extends Component {
   }
 
   getPieChartData() {
-    var data = CryptoExchanger.getCryptoValueArray();
+    var data = Profile.formatCryptoValueArray(CryptoExchanger.getCryptoValueArray());
     var colorGradient = 255 / data.length;
     var color = 0;
     for(var i = 0; i < data.length; i++) {
@@ -247,6 +282,37 @@ export default class Profile extends Component {
       color = Math.trunc(color + colorGradient);
     }
     return data;
+  }
+
+  getCryptoListNetWorthTags() {
+    var netWorthList = CryptoExchanger.getNetWorthList();
+    return (
+      <View>
+        {netWorthList.map( (currNetWorth) => (<Text style={[styles.statsText, styles.statsSubtext]}>{currNetWorth}</Text>) )}
+      </View>
+    );
+  }  
+
+  // Returns a collection of Text components which represents the profits of all 
+  // of the cryptocurrencies in the portfolio
+  getCryptoListProfitTags() {
+    // gets an array containing number values for the net profits of all the
+    // individual cryptocurrencies in the portolio
+    var profitList = CryptoExchanger.getProfitList();
+    return (
+      <View>
+        {profitList.map( (currProfit) => (<Text style={[styles.statsText, styles.statsSubtext]}>{currProfit}</Text>) )} 
+      </View> 
+    ); 
+  }
+
+  getCryptoListSubtextTags() {
+    var nameList = CryptoExchanger.getCryptoNameList();
+    return (
+      <View>  
+        {nameList.map((cryptoName, i) => (<Text style={[styles.statsTextLabel, styles.statsSubtext]}>{cryptoName}</Text>))}
+      </View>
+    );
   }
 
   isResetDialogVisible() {
@@ -360,7 +426,9 @@ export default class Profile extends Component {
       return <AppLoading />;
     } else {
       return (
-        <View style={ styles.screenContainer } >
+       <ScrollView 
+        style={ styles.screenContainer }
+        contentContainerStyle={ styles.screenContainerContent }>
 
           <PieChart
             data={this.getPieChartData()}
@@ -391,17 +459,21 @@ export default class Profile extends Component {
             <View style={ styles.statsContainerLeft }>
               <Text style={ styles.statsTextLabel } >date started</Text>
               <Text style={ styles.statsTextLabel } >profile age</Text>
+              <Text style={ styles.statsTextLabel } >net profit</Text>
+              { this.getCryptoListSubtextTags() }
               <Text style={ styles.statsTextLabel } >net worth</Text>
-              <Text style={ [styles.statsTextLabel, styles.statsSubtext] }>total crypto value</Text>
-              <Text style={ [styles.statsTextLabel, styles.statsSubtext] }>total dollars</Text>
+              <Text style={ [styles.statsTextLabel, styles.statsSubtext] }>dollars</Text>
+              { this.getCryptoListSubtextTags() }
             </View>
 
             <View style={ styles.statsContainerRight }>
               <Text style={ styles.statsText } >{this.getDateCreatedString()}</Text>
               <Text style={ styles.statsText } >{this.getProfileAge()} days</Text>
+              <Text style={ styles.statsText } >${round(CryptoExchanger.getTotalProfit(), 2)}</Text>
+              { this.getCryptoListProfitTags() }
               <Text style={ styles.statsText } >${round(CryptoExchanger.getTotalCurrentNetValue(), 2)}</Text>
-              <Text style={ [styles.statsText, styles.statsSubtext] } >${round(CryptoExchanger.getTotalCryptoValue(), 2)}</Text>
               <Text style={ [styles.statsText, styles.statsSubtext] } >${round(CryptoExchanger.getDollars(), 2)}</Text>
+              { this.getCryptoListNetWorthTags() }
             </View>
 
           </View>
@@ -422,7 +494,7 @@ export default class Profile extends Component {
 
           </View>
 
-        </View>
+        </ScrollView>
       );
     }
   }
