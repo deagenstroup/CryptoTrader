@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
 
   statsContainer: {
     flex: 0,
-    flexDirection: 'row',
+    flexDirection: 'column',
     justifyContent: 'space-evenly',
     alignItems: 'flex-start',
     padding: 10,
@@ -72,19 +72,27 @@ const styles = StyleSheet.create({
     borderColor: 'black',
   },
 
-  statsContainerLeft: {
-    flex: 0,
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'flex-start',
+  statsRow: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+    paddingTop: 2,
+    paddingBottom: 2,
+  },
 
+  statsContainerLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
   },
 
   statsContainerRight: {
-    flex: 0,
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'flex-end',
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
   },
 
   statsText: {
@@ -202,12 +210,17 @@ export default class Profile extends Component {
     console.log("Forcing profile update...");
   }
 
-  // Takes in an array of objects with the names and dollar values of cryptocurrencies, 
+  static getColorScheme() {
+    if(Profile.profileComponent != null)
+      return Profile.profileComponent.getColorScheme();
+  }
+
+  // Takes in an array of objects with the names and dollar values of cryptocurrencies,
   // orders them in descending order based on their value, and combines all currencies
   // below the top four into an "other" category for use in profile pie chart
   static formatCryptoValueArray(cryptoArray) {
      // Selection sort the array into descending order based on value
-    var i, j, max; 
+    var i, j, max;
     for(i = 0; i < cryptoArray.length-1; i++) {
       max = i;
       for(j = i+1; j < cryptoArray.length; j++) {
@@ -226,10 +239,10 @@ export default class Profile extends Component {
         cryptoArray.splice(5, 1);
       }
       cryptoArray[4].name = "Other";
-    } 
+    }
 
     return cryptoArray;
-  }  
+  }
 
   constructor(props) {
     super(props);
@@ -243,6 +256,13 @@ export default class Profile extends Component {
       isLoaded: false,
 
       resetDialogVisible: false,
+
+      // Controls the colors of the main components in the application
+      // light: black components and white background
+      // blue: blue components and white background
+      // dark: white components and black background
+      // blue dark: blue components and black background
+      colorScheme: 'light',
 
     }
 
@@ -262,7 +282,11 @@ export default class Profile extends Component {
   }
 
   getDateCreatedString() {
-    return this.state.dateCreated.toDateString();
+    return this.state.dateCreated.toLocaleDateString('en-US', {
+      day: 'numeric',
+      weekday: 'narrow',
+      year: 'numeric',
+    });
   }
 
   getProfileAge() {
@@ -291,25 +315,26 @@ export default class Profile extends Component {
         {netWorthList.map( (currNetWorth) => (<Text style={[styles.statsText, styles.statsSubtext]}>{currNetWorth}</Text>) )}
       </View>
     );
-  }  
+  }
 
-  // Returns a collection of Text components which represents the profits of all 
+  // Returns a collection of Text components which represents the profits of all
   // of the cryptocurrencies in the portfolio
-  getCryptoListProfitTags() {
+  getCryptoListTags(profits) {
     // gets an array containing number values for the net profits of all the
     // individual cryptocurrencies in the portolio
-    var profitList = CryptoExchanger.getProfitList();
-    return (
-      <View>
-        {profitList.map( (currProfit) => (<Text style={[styles.statsText, styles.statsSubtext]}>{currProfit}</Text>) )} 
-      </View> 
-    ); 
+    var cryptoArray = CryptoExchanger.getCryptoExchangerArray();
+    return cryptoArray.map( (cryptoObj) => (
+          <View style={ styles.statsRow }>
+            <View style={ styles.statsContainerLeft }><Text style={ [styles.statsTextLabel, styles.statsSubtext] } >{cryptoObj.getCoinName()}</Text></View>
+            <View style={ styles.statsContainerRight }><Text style={ [styles.statsText, styles.statsSubtext] } >${profits?round(cryptoObj.getNetProfit(), 2):round(cryptoObj.getCurrentValue(), 2)}</Text></View>
+          </View>
+        ));
   }
 
   getCryptoListSubtextTags() {
     var nameList = CryptoExchanger.getCryptoNameList();
     return (
-      <View>  
+      <View>
         {nameList.map((cryptoName, i) => (<Text style={[styles.statsTextLabel, styles.statsSubtext]}>{cryptoName}</Text>))}
       </View>
     );
@@ -426,7 +451,7 @@ export default class Profile extends Component {
       return <AppLoading />;
     } else {
       return (
-       <ScrollView 
+       <ScrollView
         style={ styles.screenContainer }
         contentContainerStyle={ styles.screenContainerContent }>
 
@@ -455,26 +480,30 @@ export default class Profile extends Component {
           />
 
           <View style={ [styles.statsContainer, styles.subcontainerSpacer] } >
-
-            <View style={ styles.statsContainerLeft }>
-              <Text style={ styles.statsTextLabel } >date started</Text>
-              <Text style={ styles.statsTextLabel } >profile age</Text>
-              <Text style={ styles.statsTextLabel } >net profit</Text>
-              { this.getCryptoListSubtextTags() }
-              <Text style={ styles.statsTextLabel } >net worth</Text>
-              <Text style={ [styles.statsTextLabel, styles.statsSubtext] }>dollars</Text>
-              { this.getCryptoListSubtextTags() }
+            <View style={ styles.statsRow }>
+              <View style={ styles.statsContainerLeft }><Text style={ styles.statsTextLabel } >date started</Text></View>
+              <View style={ styles.statsContainerRight }><Text style={ styles.statsText } >{this.getDateCreatedString()}</Text></View>
             </View>
-
-            <View style={ styles.statsContainerRight }>
-              <Text style={ styles.statsText } >{this.getDateCreatedString()}</Text>
-              <Text style={ styles.statsText } >{this.getProfileAge()} days</Text>
-              <Text style={ styles.statsText } >${round(CryptoExchanger.getTotalProfit(), 2)}</Text>
-              { this.getCryptoListProfitTags() }
-              <Text style={ styles.statsText } >${round(CryptoExchanger.getTotalCurrentNetValue(), 2)}</Text>
-              <Text style={ [styles.statsText, styles.statsSubtext] } >${round(CryptoExchanger.getDollars(), 2)}</Text>
-              { this.getCryptoListNetWorthTags() }
+            <View style={ styles.statsRow }>
+              <View style={ styles.statsContainerLeft }><Text style={ styles.statsTextLabel } >profile age</Text></View>
+              <View style={ styles.statsContainerRight }><Text style={ styles.statsText } >{this.getProfileAge()} days</Text></View>
             </View>
+            <View style={ styles.statsRow }>
+              <View style={ styles.statsContainerLeft }><Text style={ styles.statsTextLabel } >net profit</Text></View>
+              <View style={ styles.statsContainerRight }><Text style={ styles.statsText } >${round(CryptoExchanger.getTotalProfit(), 2)}</Text></View>
+            </View>
+            { this.getCryptoListTags(true) }
+            <View style={ styles.statsRow }>
+              <View style={ styles.statsContainerLeft }><Text style={ styles.statsTextLabel } >net worth</Text></View>
+              <View style={ styles.statsContainerRight }><Text style={ styles.statsText } >${round(CryptoExchanger.getTotalCurrentNetValue(), 2)}</Text></View>
+            </View>
+            <View style={ styles.statsRow }>
+              <View style={ styles.statsContainerLeft }><Text style={ [styles.statsTextLabel, styles.statsSubtext] }>dollars</Text></View>
+              <View style={ styles.statsContainerRight }><Text style={ [styles.statsText, styles.statsSubtext] } >${round(CryptoExchanger.getDollars(), 2)}</Text></View>
+            </View>
+            { this.getCryptoListTags(false) }
+
+
 
           </View>
 

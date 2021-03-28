@@ -87,7 +87,43 @@ const styles = StyleSheet.create({
     height: 50,
   },
 
+  widthExpand: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+
+
+  pickerButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 20,
+    paddingRight: 20,
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+
+  startJustified: {
+    justifyContent: 'flex-start',
+  },
+
+  endJustified: {
+    justifyContent: 'flex-end',
+  },
+
+  modalButton: {
+    flex: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+
   basicButton: {
+    // borderColor: 'red',
+    // borderWidth: 2,
     height: 50,
     borderRadius: 10,
   },
@@ -204,21 +240,17 @@ export default class ExchangerScreen extends Component {
 
   getCoinPickerButton() {
     return (<TouchableOpacity
-              style={styles.basicButton}
+              style={[styles.pickerButton, styles.startJustified]}
               onPress={() => this.setCoinPickerModalVisible(true)} >
-              <View style={styles.buttonInsideContainer} >
                 <Text style={styles.webFontSemiBold}>{this.getChosenCryptoName()}</Text>
-              </View>
             </TouchableOpacity> );
   }
 
   getGraphPickerButton() {
     return (<TouchableOpacity
-              style={styles.basicButton}
+              style={[styles.pickerButton, styles.endJustified]}
               onPress={() => this.setGraphPickerModalVisible(true)} >
-              <View style={styles.buttonInsideContainer} >
                 <Text style={styles.webFontSemiBold}>{this.state.graphTimeframe}</Text>
-              </View>
             </TouchableOpacity> );
   }
 
@@ -231,7 +263,7 @@ export default class ExchangerScreen extends Component {
               }}
               visible={this.state.coinPickerModalVisible}
               textStyle={styles.webFont}
-              buttonStyle={styles.basicButton}
+              buttonStyle={styles.modalButton}
               transparent={true}
               onRequestClose={() => {
                 this.setCoinPickerModalVisible(false);
@@ -248,7 +280,7 @@ export default class ExchangerScreen extends Component {
               }}
               visible={this.state.graphPickerModalVisible}
               textStyle={styles.webFont}
-              buttonStyle={styles.basicButton}
+              buttonStyle={styles.modalButton}
               transparent={true}
               onRequestClose={() => {
                 this.setGraphPickerModalVisible(false);

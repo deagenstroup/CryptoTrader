@@ -46,6 +46,14 @@ export default class CryptoExchanger {
     return CryptoExchanger.cryptoExchangerArray[0];
   }
 
+  static getCryptoExchangerArray() {
+    var cryptoArray = [];
+    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
+      cryptoArray.push(CryptoExchanger.cryptoExchangerArray[i]);
+    }
+    return cryptoArray;
+  }
+
   /** Takes in the ID of a cryptocurrency and returns the CryptoExchanger object
       which handles that currency **/
   static getCryptoExchanger(inCoinID) {
@@ -99,7 +107,7 @@ export default class CryptoExchanger {
       netWorthArray[i] = round(cryptoObj.getCurrentValue(), 2);
     });
     return netWorthArray;
-  }  
+  }
 
   static getProfitList() {
     var profitArray = [];
