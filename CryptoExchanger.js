@@ -120,12 +120,14 @@ export default class CryptoExchanger {
   static getTotalProfit() {
     var totalDollarBoughtVolume = this.removedDollarBoughtVolume;
     var totalDollarSoldVolume = this.removedDollarSoldVolume;
+    var totalCryptoValue = 0;
     for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
       totalDollarBoughtVolume += CryptoExchanger.cryptoExchangerArray[i].dollarBoughtVolume;
       totalDollarSoldVolume += CryptoExchanger.cryptoExchangerArray[i].dollarSoldVolume;
+      totalCryptoValue += CryptoExchanger.cryptoExchangerArray[i].getCurrentValue();
     }
     console.log("totalDollarSoldVolume: " + totalDollarSoldVolume + ", totalDollarBoughtVolume: " + totalDollarBoughtVolume);
-    return totalDollarSoldVolume - totalDollarBoughtVolume;
+    return totalDollarSoldVolume + totalCryptoValue - totalDollarBoughtVolume;
   }
 
   static getCryptoNameList() {
@@ -313,7 +315,7 @@ export default class CryptoExchanger {
       .catch((error) => console.error(error))
       .finally(() => {
         this.priceLoaded = true;
-        this.coinPrice = this.coinPrice*2;
+        this.coinPrice = this.coinPrice;
       });
   }
 
@@ -365,7 +367,7 @@ export default class CryptoExchanger {
   }
 
   getNetProfit() {
-    return this.dollarSoldVolume - this.dollarBoughtVolume;
+    return this.dollarSoldVolume + this.getCurrentValue() - this.dollarBoughtVolume;
   }
 
   areValuesLoaded() {

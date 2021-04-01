@@ -23,9 +23,21 @@ import CryptoExchanger from "./CryptoExchanger.js";
 import Profile from "./Profile.js";
 import ExchangerScreen from "./ExchangerScreen.js";
 import CoinSearchScreen from "./CoinSearchScreen.js";
+import { lightStyles, darkStyles } from "./MiscComponents.js";
 
 LogBox.ignoreAllLogs()
 
+var theme = "light";
+export function getAppStyleSet() {
+  if(theme == null)
+    return darkStyles;
+
+  if(theme === "light") {
+    return lightStyles;
+  } else if(theme === "dark") {
+    return darkStyles;
+  }
+}
 
 const styles = StyleSheet.create({
   screenHeaderFont : {
@@ -70,22 +82,29 @@ const CustomDrawerContent = (props) => {
 const NavDrawer = () => {
   return (
     <Drawer.Navigator
+      sceneContainerStyle={getAppStyleSet().backgroundColor}
       drawerContent={props => <CustomDrawerContent {...props} />}
       drawerContentOptions={{
-        activeTintColor: '#ffffff',//'#ffffff',
-        activeBackgroundColor: '#000000',//'#2791e3',
-        inactiveTintColor: '#383838',
-        inactiveBackgroundColor: '#ffffff',
+        activeTintColor: getAppStyleSet().backgroundColor.backgroundColor,//'#ffffff',
+        activeBackgroundColor: getAppStyleSet().primColor.color,//'#2791e3',
+        inactiveTintColor: getAppStyleSet().primColor.color,
+        inactiveBackgroundColor: getAppStyleSet().backgroundColor.backgroundColor,
         labelStyle: styles.labelFont,
       }}
       screenOptions={{
-        headerTitleStyle: styles.screenHeaderFont,
+        headerTitleStyle: [styles.screenHeaderFont, {
+          flex: 1,
+          padding: 0,
+          margin: 0,
+          //backgroundColor:'red'
+        } ],
         headerShown: true,
       }}
-      drawerStyle={{
-        backgroundColor: '#ffffff',
+      drawerStyle={[getAppStyleSet().backgroundColor, {
         width: 200,
-      }}
+      }]}
+      style={{backgroundColor: "red"}}
+        
       >
 
         <Drawer.Screen
@@ -119,9 +138,9 @@ const NavDrawer = () => {
   );
 }
 
-
-
 export default function App() {
+  appComponent = this;
+  
   const [fontsLoaded] = useFonts({
     TitilliumWeb: require("./fonts/TitilliumWeb-Regular.ttf"),
     TitilliumWebSemiBold: require("./fonts/TitilliumWeb-SemiBold.ttf"),
@@ -145,13 +164,12 @@ export default function App() {
       });
   }
 
-
-
   if(!fontsLoaded || !cryptoLoaded) {
     return <AppLoading />;
   } else {
     return (
-      <NavigationContainer>
+      <NavigationContainer
+        style={getAppStyleSet().backgroundColor}>
         <NavDrawer />
       </NavigationContainer>
     );

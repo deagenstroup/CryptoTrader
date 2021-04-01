@@ -11,9 +11,10 @@ import {
 
 /* components imported from Expo */
 import AppLoading from 'expo-app-loading';
+import { getAppStyleSet } from "./App.js";
 import * as FileSystem from 'expo-file-system';
-
 import CryptoExchanger from './CryptoExchanger';
+import Profile from './Profile.js';
 
 import { LineChart } from 'react-native-chart-kit';
 
@@ -32,7 +33,6 @@ const styles = StyleSheet.create({
   largeColumnBox: {
     flex: 1,
     flexDirection: 'column',
-    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'flex-start',
   },
@@ -58,11 +58,11 @@ const styles = StyleSheet.create({
   },
 
   iconsColumn: {
-    flexGrow: 0,
+    flexGrow: 1,
     flexDirection: 'column',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingTop: 2,
+    paddingTop: 0,
   },
   valuesColumn: {
     flex: 0,
@@ -195,7 +195,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     marginRight: 8,
     borderWidth: 2,
-    borderColor: 'black',
   },
   square: {
     width: 54,
@@ -207,10 +206,10 @@ const styles = StyleSheet.create({
     // width: '37.5%',
     height: 54,
   },
-  whiteBackground: {
+  unselectedBackground: {
     backgroundColor: 'white',
   },
-  blackBackground: {
+  background: {
     backgroundColor: 'black',
   },
   exchangeButtonInsideContainer: {
@@ -473,7 +472,10 @@ export default class ExchangerComponent extends Component {
   }
 
 
-
+  getStyleSet() {
+    return getAppStyleSet();
+  }
+  
   getCoinExchangeMode () {
     return this.state.coinExchangeMode;
   }
@@ -564,6 +566,44 @@ export default class ExchangerComponent extends Component {
 
 
 
+  getChartConfig() {
+    var styleSet = Profile.getColorScheme();
+    if(styleSet === "light" || styleSet === "dark") {
+      return {
+        backgroundColor: "#bfbfbf",
+        backgroundGradientFrom: "#000000",
+        backgroundGradientTo: "#545454",
+        decimalPlaces: 2, // optional, defaults to 2dp
+        color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+        labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+        style: {
+          borderRadius: 16
+        },
+        propsForDots: {
+          r: "5",
+          strokeWidth: "2",
+          stroke: "#ffffff"
+        }
+      };
+    } else if(styleSet === "blue") {
+      return {
+        backgroundColor: "rgb( 0, 54, 255 )",
+        backgroundGradientFrom: "rgb( 84, 120, 255 )",
+        backgroundGradientTo: "rgb( 0, 54, 255 )",
+        decimalPlaces: 2, // optional, defaults to 2dp
+        color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+        labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+        style: {
+          borderRadius: 16
+        },
+        propsForDots: {
+          r: "5",
+          strokeWidth: "2",
+          stroke: "#ffffff"
+        }
+      };
+    }
+  }
 
   getLineChart() {
     if(this.state.isChartDataLoaded) {
@@ -575,22 +615,7 @@ export default class ExchangerComponent extends Component {
           yAxisLabel="$"
           yAxisSuffix=""
           yAxisInterval={1} // optional, defaults to 1
-          chartConfig={{
-            backgroundColor: "#bfbfbf",
-            backgroundGradientFrom: "#000000",
-            backgroundGradientTo: "#545454",
-            decimalPlaces: 2, // optional, defaults to 2dp
-            color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-            style: {
-              borderRadius: 16
-            },
-            propsForDots: {
-              r: "5",
-              strokeWidth: "2",
-              stroke: "#ffffff"
-            }
-          }}
+          chartConfig={this.getChartConfig()}
           bezier
           style={{
             marginVertical: 8,
@@ -626,20 +651,49 @@ export default class ExchangerComponent extends Component {
 
   }
 
+  getPrimColor() {
+    var styleSet = Profile.getColorScheme();
+    if(styleSet === "light") {
+      return "black";
+    } else if(styleSet === "blue") {
+      return bluePrimaryColor;
+    } else if(styleSet === "dark") {
+      return "white";
+    }
+  }
+
+  getSecColor() {
+    var styleSet = Profile.getColorScheme();
+    if(styleSet === "light") {
+      return "white";
+    } else if(styleSet === "blue") {
+      return bluePrimaryColor;
+    } else if(styleSet === "dark") {
+      return "black";
+    }
+  }
+
   getDollarButtonStyle() {
+    var styleSet = this.getStyleSet();
     if(this.state.coinExchangeMode) {
-      return [styles.button, styles.square, styles.whiteBackground];
+      return [styles.button, styles.square, styleSet.unfilledButton];
     } else {
-      return [styles.button, styles.square, styles.blackBackground];
+      return [styles.button, styles.square, styleSet.filledButton];
     }
   }
 
   getCoinButtonStyle() {
-    if(!this.state.coinExchangeMode) {
-      return [styles.button, styles.square, styles.whiteBackground];
+    var styleSet = this.getStyleSet();
+    if(this.state.coinExchangeMode) {
+      return [styles.button, styles.square, styleSet.filledButton];
     } else {
-      return [styles.button, styles.square, styles.blackBackground];
+      return [styles.button, styles.square, styleSet.unfilledButton];
     }
+  }
+
+  getExchangeButtonStyle() {
+    var styleSet = this.getStyleSet();
+    return [styles.button, styles.wide, styleSet.filledButton];
   }
 
   getExchangeBox() {
@@ -649,14 +703,14 @@ export default class ExchangerComponent extends Component {
 
           <View style={ styles.rowCenteredFlexBox }>
             <TouchableOpacity
-              style={ [styles.button, styles.wide, styles.blackBackground] }
+              style={ this.getExchangeButtonStyle() }
               onPress={() => this.setExchangeMode(true)} >
-              <Text style={ [styles.webFontSmall, styles.white] }>buy</Text>
+              <Text style={ [styles.webFontSmall, this.getStyleSet().filledButtonLabel] }>buy</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={ [styles.button, styles.wide, styles.blackBackground] }
+              style={ this.getExchangeButtonStyle() }
               onPress={ () => this.setExchangeMode(false) } >
-              <Text style={ [styles.webFontSmall, styles.white] }>sell</Text>
+              <Text style={ [styles.webFontSmall, this.getStyleSet().filledButtonLabel] }>sell</Text>
             </TouchableOpacity>
           </View>
 
@@ -667,29 +721,31 @@ export default class ExchangerComponent extends Component {
         <View style={ [styles.columnCenteredFlexBox, styles.wideContainer, styles.bottomMargin] }>
 
           <View style={ [styles.rowCenteredFlexBox, styles.bottomMargin] }>
+
             <TouchableOpacity
               style={ this.getDollarButtonStyle() }
               onPress={() => this.setCoinExchangeMode(false)}>
               <View style={ styles.exchangeButtonInsideContainer }>
-              <Feather name="dollar-sign" size={32} color={this.state.coinExchangeMode?'black':'white'} />
+              <Feather name="dollar-sign" size={32} color={this.state.coinExchangeMode?this.getStyleSet().unfilledButtonLabel.color:this.getStyleSet().filledButtonLabel.color} />
               </View>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={ this.getCoinButtonStyle() }
               onPress={() => this.setCoinExchangeMode(true)}>
-              {this.getCoinIcon(this.state.coinExchangeMode?'white':'black')}
+              {this.getCoinIcon(this.state.coinExchangeMode?this.getStyleSet().filledButtonLabel.color:this.getStyleSet().unfilledButtonLabel.color)}
             </TouchableOpacity>
           </View>
 
           <View style={ styles.rowCenteredFlexBox }>
             <TouchableOpacity
-              style={ [styles.button, styles.square, styles.blackBackground] }
+              style={ [styles.button, styles.square, this.getStyleSet().filledButton] }
               onPress={() => {
                 this.exchangeCurrency();
                 this.setExchangeMode(null);
               }} >
-              <Text style={ [styles.webFontSmall, styles.white] }>
-                {this.state.exchangeMode?<Feather name="plus" size={36} color="white" />:<Feather name="minus" size={36} color="white" />}
+              <Text style={ [styles.webFontSmall] }>
+                <Feather name="plus" size={36} color={this.getStyleSet().filledButtonLabel.color} />
               </Text>
             </TouchableOpacity>
             <TextInput
@@ -766,29 +822,37 @@ export default class ExchangerComponent extends Component {
 
 
   render () {
-    if(this.state.cryptoExchanger == null || !this.state.cryptoExchanger.isPriceLoaded() || !this.state.cryptoExchanger.areValuesLoaded()) {
+    if( this.state.cryptoExchanger == null || 
+       !this.state.cryptoExchanger.isPriceLoaded() ||
+       !this.state.cryptoExchanger.areValuesLoaded() ) {
       return <AppLoading />;
     } else {
       return (
-        <View style={styles.largeColumnBox}>
+        <View style={[styles.largeColumnBox, this.getStyleSet().backgroundColor]}>
 
           { this.getLineChart() }
 
           {/** Row containing value container and hypothetical value container **/}
-          <View style={[styles.leftAlignedRowContainer, styles.subcontainerSpacer, styles.wideContainer]}>
+          <View style={[
+            styles.leftAlignedRowContainer, 
+            styles.subcontainerSpacer, 
+            styles.wideContainer]}>
+            
             {/* currency display elements */}
             <View style={styles.leftAlignedRowContainer}>
+
+              {/* Currency icons */}
               <View style={[styles.iconsColumn, styles.rowSpacer]}>
-                <Feather name="dollar-sign" size={32} color="black" />
-                {this.getCoinIcon("black")}
+                <Feather name="dollar-sign" size={32} color={getAppStyleSet().primColor.color}/>
+                {this.getCoinIcon(getAppStyleSet().primColor.color)}
                 {/**<Entypo name="price-tag" size={24} color="black" />**/}
-                <Ionicons name="md-pricetag" size={24} color="black" />
+                <Ionicons name="md-pricetag" size={24} color={getAppStyleSet().primColor.color} />
               </View>
 
               <View style={styles.valuesColumn}>
-                <Text style={styles.webFont}>{round(this.getDollars(), 2)}</Text>
-                <Text style={styles.webFont}>{round(this.getCoin(), 5)}</Text>
-                <Text style={styles.webFont}>{this.getCoinPrice()}</Text>
+                <Text style={[styles.webFont, this.getStyleSet().primColor]}>{round(this.getDollars(), 2)}</Text>
+                <Text style={[styles.webFont, this.getStyleSet().primColor]}>{round(this.getCoin(), 5)}</Text>
+                <Text style={[styles.webFont, this.getStyleSet().primColor]}>{this.getCoinPrice()}</Text>
               </View>
             </View>
 
@@ -797,10 +861,6 @@ export default class ExchangerComponent extends Component {
             {this.getCurrencyExchangeBox()}
 
           </View>
-
-
-          {/* currency exchange elements */}
-
           {this.getExchangeBox()}
 
         </View>

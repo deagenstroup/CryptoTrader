@@ -65,6 +65,59 @@ const styles = StyleSheet.create({
     },
 });
 
+/** Styles used for light theme **/
+export const lightStyles = StyleSheet.create({
+  primColor: {
+    color: 'black',
+  },
+  backgroundColor: {
+    backgroundColor: "white",
+  },
+
+  filledButton: {
+    backgroundColor: "black",
+    borderColor: "black",
+  },
+  filledButtonLabel: {
+    color: 'white',
+  },
+
+  unfilledButton: {
+    backgroundColor: "white",
+    borderColor: "black",
+  },
+  unfilledButtonLabel: {
+    color: 'black', 
+  },
+});
+
+
+/** Styles used for dark theme **/
+export const darkStyles = StyleSheet.create({
+  primColor: {
+    color: 'white',
+  },
+  backgroundColor: {
+    backgroundColor: "black",
+  },
+
+  filledButton: {
+    backgroundColor: "white",
+    borderColor: "white",
+  },
+  filledButtonLabel: {
+    color: 'black',
+  },
+
+  unfilledButton: {
+    backgroundColor: "black",
+    borderColor: "white",
+  },
+  unfilledButtonLabel: {
+    color: 'white', 
+  },
+});
+
 
 /** A popup Modal that confirms that the user would like to do a certain action.
     required props:

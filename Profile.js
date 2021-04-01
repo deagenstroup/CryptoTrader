@@ -213,8 +213,10 @@ export default class Profile extends Component {
   static getColorScheme() {
     if(Profile.profileComponent != null)
       return Profile.profileComponent.getColorScheme();
+    return null;
   }
 
+  
   // Takes in an array of objects with the names and dollar values of cryptocurrencies,
   // orders them in descending order based on their value, and combines all currencies
   // below the top four into an "other" category for use in profile pie chart
@@ -273,6 +275,8 @@ export default class Profile extends Component {
     this.loadValuesFromFile()
         .catch((error) => console.log("Error loading profile from file."))
         .finally(() => this.setState({isLoaded: true}));
+
+    
   }
 
 
@@ -293,6 +297,10 @@ export default class Profile extends Component {
     var todaysDate = new Date();
     var timeDifference = todaysDate.getTime() - this.getDateCreated().getTime();
     return Math.trunc(timeDifference / (1000 * 3600 * 24));
+  }
+
+  getColorScheme() {
+    return this.state.colorScheme;
   }
 
   getPieChartData() {

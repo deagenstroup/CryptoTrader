@@ -15,6 +15,7 @@ import { SearchBar } from 'react-native-elements';
 import { Entypo } from '@expo/vector-icons';
 
 import CryptoExchanger from "./CryptoExchanger.js";
+import Profile from "./Profile.js";
 
 import { ConfirmationModal } from "./MiscComponents.js";
 
@@ -112,6 +113,13 @@ const styles = StyleSheet.create({
 
 });
 
+const blueStyles = StyleSheet.create({
+  searchBarInputContainer: {
+    borderRadius: 6,
+    backgroundColor: 'rgba(0, 60, 235, 0.75)',
+  },
+});
+
 
 
 export default class CoinSearchScreen extends Component {
@@ -197,11 +205,20 @@ export default class CoinSearchScreen extends Component {
   }
 
 
+  getStyleSet() {
+    var styleSet = Profile.getColorScheme();
+    if(styleSet === "light") {
+      return styles;
+    } else if(styleSet === "blue") {
+      return blueStyles;
+    }
+  }
+
   getSearchBox() {
     return (
       <SearchBar
         containerStyle={styles.searchBarContainer}
-        inputContainerStyle={styles.searchBarInputContainer}
+        inputContainerStyle={this.getStyleSet().searchBarInputContainer}
         inputStyle={styles.searchBarInput}
         placeholder="Search cryptocurrencies..."
         onChangeText={(text) => this.setSearchText(text)}

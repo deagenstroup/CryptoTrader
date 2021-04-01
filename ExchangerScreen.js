@@ -19,12 +19,12 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 
 import CryptoExchanger from "./CryptoExchanger.js";
 import  ExchangerComponent from './Exchanger.js';
-
+import Profile from './Profile.js';
+import { getAppStyleSet } from "./App.js";
 const styles = StyleSheet.create({
   largeColumnBox: {
     flex: 0,
     flexDirection: 'column',
-    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'flex-start',
   },
@@ -140,6 +140,24 @@ const styles = StyleSheet.create({
 
 });
 
+const lightStyles = StyleSheet.create({
+  backgroundColor: {
+    backgroundColor: "#ffffff",
+  },
+});
+
+const blueStyles = StyleSheet.create({
+  backgroundColor: {
+    backgroundColor: "#ffffff",
+  },
+});
+
+const darkStyles = StyleSheet.create({
+  backgroundColor: {
+    backgroundColor: "#000000",
+  },
+});
+
 const PickerModal = (props) => {
   return (
     <Modal
@@ -195,6 +213,10 @@ export default class ExchangerScreen extends Component {
     }
 
     ExchangerScreen.exchangerScreen = this;
+  }
+
+  getStyleSet() {
+    return getAppStyleSet(); 
   }
 
 
@@ -291,16 +313,16 @@ export default class ExchangerScreen extends Component {
 
 
   render() {
-    if(this.state.chosenCryptoName == null || CryptoExchanger.getCryptoExchangerByName(this.state.chosenCryptoName) == null) {
+    if(this.state.chosenCryptoName == null ||
+       CryptoExchanger.getCryptoExchangerByName(this.state.chosenCryptoName) == null) {
       return <AppLoading />;
     }
     return (
       <KeyboardAwareScrollView
-        contentContainerStyle={ styles.largeColumnBox }
-        extraHeight={50}
-        style={{backgroundColor: "#ffffff"}}>
+        contentContainerStyle={ [styles.largeColumnBox, this.getStyleSet().backgroundColor] }
+        extraHeight={50}>
 
-        <View style={styles.wideRowBox}>
+        <View style={[styles.wideRowBox, this.getStyleSet().backgroundColor]}>
           { this.getCoinPickerButton() }
           { this.getGraphPickerButton() }
         </View>
