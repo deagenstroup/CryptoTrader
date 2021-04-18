@@ -1,11 +1,14 @@
-import React, { Component } from 'react';
+import React, { Component, useState } from 'react';
 import {
   Modal,
   StyleSheet,
   TouchableOpacity,
   Text,
+  TextInput,
   View,
 } from 'react-native';
+
+import { FontAwesome } from '@expo/vector-icons';
 
 const styles = StyleSheet.create({
     centeredContainer: {
@@ -45,7 +48,6 @@ const styles = StyleSheet.create({
     },
 
     dialogButton: {
-      width: 100,
       height: 45,
       borderRadius: 5 ,
       backgroundColor: 'rgb(181, 181, 181)',
@@ -63,6 +65,14 @@ const styles = StyleSheet.create({
       fontFamily: 'TitilliumWeb',
       fontSize: 22,
     },
+
+    numberInputBox: {
+      flex: 1,
+      height: 45,
+      borderRadius: 5,
+      marginLeft: 5,
+      marginRight: 5,
+    },
 });
 
 /** Styles used for light theme **/
@@ -72,6 +82,9 @@ export const lightStyles = StyleSheet.create({
   },
   backgroundColor: {
     backgroundColor: "white",
+  },
+  borderColor: {
+    borderColor: 'black',
   },
 
   filledButton: {
@@ -89,6 +102,10 @@ export const lightStyles = StyleSheet.create({
   unfilledButtonLabel: {
     color: 'black', 
   },
+
+  piechart: {
+    backgroundColor: 'transparent',
+  },
 });
 
 
@@ -99,6 +116,9 @@ export const darkStyles = StyleSheet.create({
   },
   backgroundColor: {
     backgroundColor: "black",
+  },
+  borderColor: {
+    borderColor: 'white',
   },
 
   filledButton: {
@@ -116,8 +136,60 @@ export const darkStyles = StyleSheet.create({
   unfilledButtonLabel: {
     color: 'white', 
   },
+
+  piechart: {
+    backgroundColor: 'grey',
+  },
 });
 
+export const NumberInputModal = (props) => {
+  const [inputText, setInputText] = useState("10000");
+  return (
+    <Modal
+      transparent={true}
+      onRequestClose={() => {
+        props.setVisibility(false);
+      }} { ...props }>
+      
+      {/* Container which expands across the entire screen and places the 
+          modal in the center of it. */}
+      <View style={styles.centeredContainer}>
+
+        {/* Container for the actual modal which places items in a single column
+            inside the modal */}
+        <View style={styles.dialogContainer}>
+          
+          {/* The text which is displayed to the user inside the modal */}
+          <View style={ styles.dialogRow }>
+            <Text style={ styles.dialogText }>{props.promptString}</Text>
+          </View>
+
+          <View style={ styles.dialogRow }>
+
+            <TouchableOpacity
+              style={ [styles.dialogButton, {width: 45}] }
+              onPress={() => {
+                props.onConfirmation(inputText);
+                props.setVisibility(false);
+              }} >
+              <View style={styles.dialogTextContainer}>
+                <FontAwesome name="check" size={24} color="black" />
+              </View>
+            </TouchableOpacity>
+
+            <TextInput
+              style={ [styles.numberInputBox, styles.dialogText]  }
+              keyboardType="decimal-pad" 
+              onChangeText={text => setInputText(text)}  
+              placeholder="0" 
+              value={inputText} />
+            
+          </View>
+        </View>
+      </View>
+    </Modal> 
+  );
+}
 
 /** A popup Modal that confirms that the user would like to do a certain action.
     required props:
@@ -145,7 +217,7 @@ export const ConfirmationModal = (props) => {
             <View style={ styles.dialogRow }>
 
               <TouchableOpacity
-                style={ styles.dialogButton }
+                style={ [styles.dialogButton, {width: 100}] }
                 onPress={() => {
                   props.onConfirmation();
                   props.setVisibility(false);
@@ -155,7 +227,7 @@ export const ConfirmationModal = (props) => {
                 </View>
               </TouchableOpacity>
               <TouchableOpacity
-                style={ styles.dialogButton }
+                style={ [styles.dialogButton, {width:100}] }
                 onPress={() => {
                   props.setVisibility(false);
                 }} >

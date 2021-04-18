@@ -1,6 +1,7 @@
 /* components imported from React */
 import React, { Component, useState } from 'react';
 import {
+  BackHandler,
   StyleSheet,
   TextInput,
   TouchableOpacity,
@@ -20,6 +21,7 @@ import { LineChart } from 'react-native-chart-kit';
 
 /* custom resources from expo */
 import {
+  AntDesign,
   Feather,
   FontAwesome,
   FontAwesome5,
@@ -321,7 +323,8 @@ export default class ExchangerComponent extends Component {
   }
 
   static forceUpdate() {
-    ExchangerComponent.exchanger.forceUpdate();
+    if(ExchangerComponent.exchanger != null)
+      ExchangerComponent.exchanger.forceUpdate();
   }
 
   static updateGraphTimeFrame(inTimeFrame) {
@@ -367,6 +370,18 @@ export default class ExchangerComponent extends Component {
     this.fetchCoinData();
     // CryptoExchanger.saveCryptoExchangers();
   }
+
+  componentWillUnmount() {
+    this.backHandler.remove();
+  }
+  
+  cancelExchange() {
+    console.log("backbutton pressed");
+
+    if(this.state != null && this.state.exchangeMode != null)
+      this.setExchangeMode(null)
+    return true;
+  }  
 
   /** Abstract method which is to be overwritten by subclasses, getting the
       price of whichever cryptocurrency the class represents. **/
@@ -433,6 +448,7 @@ export default class ExchangerComponent extends Component {
       var jsonTime = json.prices[i][0];
       if(jsonTime > (time - 360000*2) && jsonTime < (time + 360000*2)) {
         chartDataArray[j] = json.prices[i][1];
+        console.log("price at " + i + " : " + json.prices[i][1]);
         j--;
         time = time - 3600000*4;
       }
@@ -497,7 +513,8 @@ export default class ExchangerComponent extends Component {
   }
 
   getDollars() {
-    return CryptoExchanger.getDollars();
+    console.log("getDollars() : " + CryptoExchanger.getDollars());
+    return parseFloat(CryptoExchanger.getDollars());
   }
 
   /** Calculates the net amount of dollars that would be gained or lost from
@@ -573,7 +590,7 @@ export default class ExchangerComponent extends Component {
         backgroundColor: "#bfbfbf",
         backgroundGradientFrom: "#000000",
         backgroundGradientTo: "#545454",
-        decimalPlaces: 2, // optional, defaults to 2dp
+        decimalPlaces: 3, // optional, defaults to 2dp
         color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
         labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
         style: {
@@ -590,7 +607,7 @@ export default class ExchangerComponent extends Component {
         backgroundColor: "rgb( 0, 54, 255 )",
         backgroundGradientFrom: "rgb( 84, 120, 255 )",
         backgroundGradientTo: "rgb( 0, 54, 255 )",
-        decimalPlaces: 2, // optional, defaults to 2dp
+        decimalPlaces: 3, // optional, defaults to 2dp
         color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
         labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
         style: {
@@ -622,7 +639,17 @@ export default class ExchangerComponent extends Component {
             borderRadius: 16
           }}
           getDotColor={(dataPoint, dataPointIndex) => {return "rgb(255, 255, 255)";}}
-          formatYLabel={(inLabel) => {return inLabel.slice(0, -3);}}
+          formatYLabel={(inLabel) => {
+            // if number is in the tens of thousands, cut off the cents
+            if(inLabel.length > 7)
+              return inLabel.slice(0, -4);
+            // if the number is greater than or equal to ten, cut of the partial cents
+            else if(inLabel.length >= 6) {
+              return inLabel.slice(0, -1);
+            }  
+            return inLabel; 
+            //return inLabel.slice(0, -3);
+          }}
         />
       );
     }
@@ -696,21 +723,53 @@ export default class ExchangerComponent extends Component {
     return [styles.button, styles.wide, styleSet.filledButton];
   }
 
+  getExchangeIcon() {
+    if(this.state.exchangeMode)
+      return <Feather 
+               name="plus" 
+               size={36} 
+               color={this.getStyleSet().filledButtonLabel.color} />;
+    else
+      return <Feather 
+               name="minus" 
+               size={36} 
+               color={this.getStyleSet().filledButtonLabel.color} />;
+  }  
+ 
+
   getExchangeBox() {
     if(this.state.exchangeMode === null) {
       return (
         <View style={ [styles.columnCenteredFlexBox, styles.wideContainer, styles.bottomMargin] }>
-
+          {/* Buy Button */}
           <View style={ styles.rowCenteredFlexBox }>
             <TouchableOpacity
               style={ this.getExchangeButtonStyle() }
-              onPress={() => this.setExchangeMode(true)} >
-              <Text style={ [styles.webFontSmall, this.getStyleSet().filledButtonLabel] }>buy</Text>
+              onPress={() => {
+                this.setExchangeMode(true);
+                this.backHandler = BackHandler.addEventListener("hardwareBackPress", 
+                   () => { 
+                     this.setExchangeMode(null);
+                     return true; 
+                   });
+              }}>
+              <Text style={ [styles.webFontSmall, 
+                            this.getStyleSet().filledButtonLabel] }>buy</Text>
             </TouchableOpacity>
+
+            {/* Sell button */}
             <TouchableOpacity
               style={ this.getExchangeButtonStyle() }
-              onPress={ () => this.setExchangeMode(false) } >
-              <Text style={ [styles.webFontSmall, this.getStyleSet().filledButtonLabel] }>sell</Text>
+              onPress={ () => {
+                this.setExchangeMode(false);
+                this.backHandler = BackHandler.addEventListener("hardwareBackPress", 
+                   () => { 
+                     this.setExchangeMode(null);
+                     return true; 
+                   });
+              }} >
+              <Text style={ [styles.webFontSmall, 
+                            this.getStyleSet().filledButtonLabel] }>sell</Text>
             </TouchableOpacity>
           </View>
 
@@ -719,12 +778,14 @@ export default class ExchangerComponent extends Component {
     } else {
       return (
         <View style={ [styles.columnCenteredFlexBox, styles.wideContainer, styles.bottomMargin] }>
-
+          {/* Exchange mode buttons (Dollars or Crypto) */}
           <View style={ [styles.rowCenteredFlexBox, styles.bottomMargin] }>
 
             <TouchableOpacity
               style={ this.getDollarButtonStyle() }
-              onPress={() => this.setCoinExchangeMode(false)}>
+              onPress={() => {
+                this.setCoinExchangeMode(false);
+              }}>
               <View style={ styles.exchangeButtonInsideContainer }>
               <Feather name="dollar-sign" size={32} color={this.state.coinExchangeMode?this.getStyleSet().unfilledButtonLabel.color:this.getStyleSet().filledButtonLabel.color} />
               </View>
@@ -735,21 +796,39 @@ export default class ExchangerComponent extends Component {
               onPress={() => this.setCoinExchangeMode(true)}>
               {this.getCoinIcon(this.state.coinExchangeMode?this.getStyleSet().filledButtonLabel.color:this.getStyleSet().unfilledButtonLabel.color)}
             </TouchableOpacity>
+
           </View>
 
+          {/* Number input dialog */}
           <View style={ styles.rowCenteredFlexBox }>
+        {/*<TouchableOpacity
+              style={ [styles.button, styles.square, this.getStyleSet().filledButton] }
+              onPress={() => {
+                this.setExchangeMode(null);
+              }} >
+              <Text style={ [styles.webFontSmall] }>
+                <AntDesign name="close" size={32} color={getAppStyleSet().filledButtonLabel.color} /> 
+              </Text>
+            </TouchableOpacity>*/}
             <TouchableOpacity
               style={ [styles.button, styles.square, this.getStyleSet().filledButton] }
               onPress={() => {
                 this.exchangeCurrency();
                 this.setExchangeMode(null);
+                this.backHandler.remove();
               }} >
               <Text style={ [styles.webFontSmall] }>
-                <Feather name="plus" size={36} color={this.getStyleSet().filledButtonLabel.color} />
+                { this.getExchangeIcon() }
               </Text>
             </TouchableOpacity>
             <TextInput
-              style={[styles.textInputMargin, styles.webFont, styles.wide, styles.inputBox]}
+              style={[
+                styles.textInputMargin, 
+                styles.webFont, 
+                styles.wide, 
+                styles.inputBox,
+                getAppStyleSet().primColor,
+              ]}
               keyboardType="decimal-pad"
               onChangeText={text => this.updateInputText(text)}
               placeholder="0"
@@ -850,8 +929,8 @@ export default class ExchangerComponent extends Component {
               </View>
 
               <View style={styles.valuesColumn}>
-                <Text style={[styles.webFont, this.getStyleSet().primColor]}>{round(this.getDollars(), 2)}</Text>
-                <Text style={[styles.webFont, this.getStyleSet().primColor]}>{round(this.getCoin(), 5)}</Text>
+                <Text style={[styles.webFont, this.getStyleSet().primColor]}>{this.getDollars().toFixed(2)}</Text>
+                <Text style={[styles.webFont, this.getStyleSet().primColor]}>{this.getCoin().toFixed(5)}</Text>
                 <Text style={[styles.webFont, this.getStyleSet().primColor]}>{this.getCoinPrice()}</Text>
               </View>
             </View>

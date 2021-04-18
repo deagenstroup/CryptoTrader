@@ -18,7 +18,10 @@ export default class CryptoExchanger {
 
   /* The amount of dollars the user has, which is the same across all exchanger
      components */
-  static dollars = 100;
+  static dollars = 100.0;
+
+  /* The amount of dollars that the user initiallity started with. */
+  static startingDollars = 100;
 
   /** Contains the objects for each cryptocurrency which are loaded in at the
       apps launch and handle all of the logic operations of exchanging the currency **/
@@ -40,10 +43,25 @@ export default class CryptoExchanger {
     return CryptoExchanger.dollars;
   }
 
+  static getStartingDollars() {
+    return CryptoExchanger.startingDollars;
+  } 
+
+  static getAreCryptosLoaded() {
+    return CryptoExchanger.areCryptosLoaded;
+  }
+
   static getFirstCryptoExchanger() {
-    if(CryptoExchanger.cryptoExchangerArrayLength == 0)
+    if(CryptoExchanger.cryptoExchangerArrayLength == 0 || 
+       CryptoExchanger.cryptoExchangerArray[0] == null)
       return null;
     return CryptoExchanger.cryptoExchangerArray[0];
+  }
+
+  static getFirstCryptoExchangerName() {
+    if(CryptoExchanger.getFirstCryptoExchanger() == null)
+      return null;
+    return CryptoExchanger.getFirstCryptoExchanger().getCoinName();
   }
 
   static getCryptoExchangerArray() {
@@ -57,7 +75,7 @@ export default class CryptoExchanger {
   /** Takes in the ID of a cryptocurrency and returns the CryptoExchanger object
       which handles that currency **/
   static getCryptoExchanger(inCoinID) {
-    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
+    for(var i = 0; i < CryptoExchanger.cryptoExchangerArray.length; i++) {
       if(CryptoExchanger.cryptoExchangerArray[i].getCoinID() === inCoinID) {
         return CryptoExchanger.cryptoExchangerArray[i];
       }
@@ -68,7 +86,7 @@ export default class CryptoExchanger {
   /** Takes in the name of a cryptocurrency and returns the CryptoExchanger object
       which handles that currency **/
   static getCryptoExchangerByName(inCoinName) {
-    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
+    for(var i = 0; i < CryptoExchanger.cryptoExchangerArray.length; i++) {
       if(CryptoExchanger.cryptoExchangerArray[i].getCoinName() === inCoinName) {
         return CryptoExchanger.cryptoExchangerArray[i];
       }
@@ -90,12 +108,13 @@ export default class CryptoExchanger {
   }
 
   static getTotalCurrentNetValue() {
-    return CryptoExchanger.dollars + CryptoExchanger.getTotalCryptoValue();
+    return parseFloat(CryptoExchanger.dollars) 
+      + parseFloat(CryptoExchanger.getTotalCryptoValue());
   }
 
   static getTotalCryptoValue() {
     var totalValue = 0;
-    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
+    for(var i = 0; i < CryptoExchanger.cryptoExchangerArray.length; i++) {
       totalValue = totalValue + CryptoExchanger.cryptoExchangerArray[i].getCurrentValue();
     }
     return totalValue;
@@ -118,10 +137,11 @@ export default class CryptoExchanger {
   }
 
   static getTotalProfit() {
+    return 0.003;
     var totalDollarBoughtVolume = this.removedDollarBoughtVolume;
     var totalDollarSoldVolume = this.removedDollarSoldVolume;
     var totalCryptoValue = 0;
-    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
+    for(var i = 0; i < CryptoExchanger.cryptoExchangerArray.length; i++) {
       totalDollarBoughtVolume += CryptoExchanger.cryptoExchangerArray[i].dollarBoughtVolume;
       totalDollarSoldVolume += CryptoExchanger.cryptoExchangerArray[i].dollarSoldVolume;
       totalCryptoValue += CryptoExchanger.cryptoExchangerArray[i].getCurrentValue();
@@ -179,11 +199,26 @@ export default class CryptoExchanger {
       .then(console.log("crypto list saved successfully"));
   }
 
-  static resetCryptoExchangers() {
-    CryptoExchanger.setDollars(100);
-    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
-      CryptoExchanger.cryptoExchangerArray[i].reset();
+  static resetCryptoExchangers(inDollars) {
+    CryptoExchanger.setDollars(inDollars);
+    CryptoExchanger.removedDollarBoughtVolume = 0;
+    CryptoExchanger.removedDollarSoldVolume = 0;
+    CryptoExchanger.startingDollars = inDollars;
+    CryptoExchanger.areCryptosLoaded = false;
+    Profile.forceProfileUpdate();
+    while(CryptoExchanger.cryptoExchangerArray.length > 0) {
+      var removedExchanger = CryptoExchanger.cryptoExchangerArray.splice(0, 1);
+      CryptoExchanger.cryptoExchangerArrayLength = CryptoExchanger.cryptoExchangerArrayLength-1;
+      removedExchanger[0].reset();
     }
+    CryptoExchanger.resetCryptoList()
+      .then(CryptoExchanger.loadCryptoExchangers().then(() => {
+        console.log("forcing update after load");
+        Profile.forceProfileUpdate();
+        ExchangerScreen.forceUpdate();
+      }));
+    CryptoExchanger.saveDollarVolumes()
+      .catch((error) => console.log(error));
     // ExchangerComponent.forceUpdate();
   }
 
@@ -192,16 +227,30 @@ export default class CryptoExchanger {
     if(CryptoExchanger.areCryptosLoaded)
       return;
 
-    var cryptoList = await CryptoExchanger.getCryptoListFromFile();
+    console.log("loadcryptoExchangerscalled");
+
+    var cryptoList;
+    try {
+      cryptoList = await CryptoExchanger.getCryptoListFromFile();
+    } catch(error) {
+      console.log("there was an error loading the cryptolis");
+      console.log(error);
+      cryptoList = [ "bitcoin", "ethereum", "litecoin", "monero" ];
+    }
     for(var i = 0; i < cryptoList.length; i++) {
       CryptoExchanger.cryptoExchangerArray.push(new CryptoExchanger(cryptoList[i], null, true));
       CryptoExchanger.cryptoExchangerArrayLength = CryptoExchanger.cryptoExchangerArrayLength + 1;
     }
-
-    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
-      await CryptoExchanger.cryptoExchangerArray[i].loadValuesFromFile();
-      await CryptoExchanger.cryptoExchangerArray[i].fetchCoinPrice();
-      console.log(CryptoExchanger.cryptoExchangerArray[i]);
+    console.log("cryptoList: " + cryptoList);
+    
+    try {
+      for(var i = 0; i < CryptoExchanger.cryptoExchangerArray.length; i++) {
+        await CryptoExchanger.cryptoExchangerArray[i].loadValuesFromFile();
+        await CryptoExchanger.cryptoExchangerArray[i].fetchCoinPrice();
+        console.log(CryptoExchanger.cryptoExchangerArray[i]);
+      }
+    } catch(error) {
+      console.log(error);
     }
 
     try {
@@ -210,20 +259,24 @@ export default class CryptoExchanger {
     } catch(error) {
       console.log("Error loading removed dollar volumes...");
     }
-
+    console.log("lasjdf;lkjsad;lkfja;lskjf;laskjdf;lkajsdf");
 
     CryptoExchanger.areCryptosLoaded = true;
   }
 
   static async loadDollarVolumes() {
     let fileObj = JSON.parse(await FileSystem.readAsStringAsync(
-      FileSystem.documentDirectory + "cryptolist.txt",
+      FileSystem.documentDirectory + "dollarvolumes.txt",
       { encoding: FileSystem.EncodingType.UTF8 }
     ));
+    if(fileObj == null)
+      return;
     if(fileObj.removedDollarBoughtVolume != null)
       this.removedDollarBoughtVolume = fileObj.removedDollarBoughtVolume;
     if(fileObj.removedDollarSoldVolume != null)
       this.removedDollarSoldVolume = fileObj.removedDollarSoldVolume;
+    if(fileObj.startingDollars != null)
+      CryptoExchanger.startingDollars = fileObj.startingDollars;
   }
 
   static async saveCryptoExchangers() {
@@ -253,13 +306,39 @@ export default class CryptoExchanger {
     var fileObj = {
       removedDollarBoughtVolume: this.removedDollarBoughtVolume,
       removedDollarSoldVolume: this.removedDollarSoldVolume,
+      startingDollars: CryptoExchanger.startingDollars,
     }
 
     await FileSystem.writeAsStringAsync(
-      FileSystem.documentDirectory + "cryptolist.txt",
+      FileSystem.documentDirectory + "dollarvolumes.txt",
       JSON.stringify(fileObj),
       { encoding: FileSystem.EncodingType.UTF8 }
     );
+  }
+
+  /** Creates a default list of cryptocurrencies to use in the portfolio and
+   *  saves that default list to file **/
+  static async resetCryptoList() {
+    try {
+      await FileSystem.deleteAsync(
+      FileSystem.documentDirectory + "cryptolist.txt",
+      { idempotent: true }
+    );
+    } catch(error) {
+      console.log("there was an error deleteing the cryptolist file");
+    }
+    var nameArray = [ "bitcoin", "ethereum", "litecoin", "monero" ];
+    console.log("resetCryptoList called");
+    try {
+      await FileSystem.writeAsStringAsync(
+      FileSystem.documentDirectory + "cryptolist.txt",
+      JSON.stringify(nameArray),
+      { encoding: FileSystem.EncodingType.UTF8 }
+    );
+    } catch(error) { 
+      console.log("there was an error saving cryptolist.txt file during reset");
+      console.log(error);
+    }
   }
 
   /** Returns an array of strings with the names of all the cryptocurrencies which
@@ -326,6 +405,8 @@ export default class CryptoExchanger {
   }
 
   getCoinName() {
+    if(this.coinID == null)
+      console.log("coinID null");
     if(this.coinName == null)
       return this.coinID;
     return this.coinName;
@@ -390,8 +471,13 @@ export default class CryptoExchanger {
   buyCrypto(inAmount, inDollarsWorth) {
     var newCoinAmount = this.coin;
     var newDollarAmount = CryptoExchanger.dollars;
-
-    if(inDollarsWorth) {
+    
+    // Get the amount of dollars being sold 
+    var dollarWorth = (inDollarsWorth?inAmount:this.getDollarExchangeValue(inAmount));
+    if(dollarWorth.toFixed(2) == parseFloat(CryptoExchanger.dollars).toFixed(2)) {
+      newCoinAmount += this.getCryptoExchangeValue(inAmount);
+      newDollarAmount = 0;
+    } else if(inDollarsWorth) {
       newCoinAmount += this.getCryptoExchangeValue(inAmount);
       newDollarAmount -= inAmount;
     } else {
@@ -423,7 +509,13 @@ export default class CryptoExchanger {
   sellCrypto(inAmount, inDollarsWorth) {
     var newCoinAmount = this.coin, newDollarAmount = CryptoExchanger.dollars;
 
-    if(inDollarsWorth) {
+    // Get the amount of crypto being sold
+    var cryptoWorth = (inDollarsWorth?this.getCryptoExchangeValue(inAmount):inAmount);
+    // If the amount being sold is equal to the amount currently owned up to 5 decimal places
+    if(cryptoWorth.toFixed(5) == this.coin.toFixed(5)) {
+      newCoinAmount = 0;
+      newDollarAmount += this.getDollarExchangeValue(inAmount);
+    } else if(inDollarsWorth) {
       newCoinAmount -= this.getCryptoExchangeValue(inAmount);
       newDollarAmount += inAmount;
     } else {
@@ -454,6 +546,9 @@ export default class CryptoExchanger {
 
   reset() {
     this.setCoin(0);
+    this.dollarBoughtVolume = 0;
+    this.dollarSoldVolume = 0;
+    this.saveCoinsToFile();
     this.fetchCoinPrice();
   }
 

@@ -21,6 +21,7 @@ import { PieChart } from 'react-native-chart-kit';
 
 import CryptoExchanger from "./CryptoExchanger.js";
 import ExchangerComponent from "./Exchanger.js";
+import { getAppStyleSet } from "./App.js";
 
 function round(value, decimals) {
   var num = Number(Math.trunc(value+'e'+decimals)+'e-'+decimals);
@@ -34,10 +35,10 @@ const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
     flexDirection: 'column',
-    //justifyContent: 'flex-start',
+    //justifyContent: '',
     //alignItems: 'center',
 
-    backgroundColor: 'white',
+    //backgroundColor: 'black',//getAppStyleSet().backgroundColor.backgroundColor,
 
     // borderWidth: 2,
     // borderColor: 'blue',
@@ -64,12 +65,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-evenly',
     alignItems: 'flex-start',
     padding: 10,
+    marginVertical: 6,
 
     width: '75%',
 
     borderWidth: 2,
     borderRadius: 6,
-    borderColor: 'black',
+    //borderColor: 'black',
+
   },
 
   statsRow: {
@@ -95,11 +98,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  statsText: {
-    fontFamily: 'TitilliumWeb',
-    fontSize: 18,
-  },
-
+  // Style for the text labels on the left side of the stats box
   statsTextLabel: {
     fontFamily: 'TitilliumWeb',
     fontSize: 18,
@@ -107,9 +106,30 @@ const styles = StyleSheet.create({
     textTransform: 'lowercase',
   },
 
+  statsText: {
+    fontFamily: 'TitilliumWeb',
+    fontSize: 18,
+  },
+
   statsSubtext: {
     color: 'rgb(128, 128, 128)'
   },
+
+  greenStatsSubtext: {
+    color: 'rgb(80, 160, 80)',
+  },   
+
+  greenStatsText: {
+    color: 'rgb(0, 160, 0)',
+  },
+
+  redStatsText: {
+    color: 'rgb(160, 0, 0)',
+  },
+
+  redStatsSubtext: {
+    color: 'rgb(160, 80, 80)',
+  },  
 
   buttonContainer: {
     flex: 0,
@@ -201,13 +221,18 @@ export default class Profile extends Component {
 
   static profileComponent;
 
-  static colorsArray = ['rgba(131, 167, 234, 1)', '#F00', 'rgb(0, 0, 255)', 'rgb(155, 0, 0)'];
+  static colorsArray = ['#0E7D96', '#0C1D89', '#3ACCED', '#3951EE', '#97A6C2'];
+  //static colorsArray = [ 'rgba(153, 215, 230, 1)', 'rgba(138, 150, 229, 1)', 'rgba(139, 212, 228, 1)', 'rgba(42, 65, 213, 1)', 'rgba(41, 182, 214, 1)'];
+  //static colorsArray=['rgba(45, 108, 210, 1)', 'rgba(55, 66, 210, 1)', 'rgba(55, 66, 210, 1)', 'rgba(55, 66, 210, 1)', 'rgba(55, 66, 210, 1)'];
 
   static forceProfileUpdate() {
     if(Profile.profileComponent != null)
       Profile.profileComponent.forceUpdate();
+  }
 
-    console.log("Forcing profile update...");
+  static resetProfile() {
+    if(Profile.profileComponent != null)
+      Profile.profileComponent.resetProfile();
   }
 
   static getColorScheme() {
@@ -233,6 +258,13 @@ export default class Profile extends Component {
       var swap = cryptoArray[i];
       cryptoArray[i] = cryptoArray[max];
       cryptoArray[max] = swap;
+
+      cryptoArray[i].population = round(cryptoArray[i].population, 5);
+    }
+
+    for(i = 0; i < 4; i++) {
+      if(cryptoArray[i] == null || cryptoArray[i].population == 0)
+        cryptoArray.splice(i, cryptoArray.length-i);
     }
 
     if(cryptoArray.length > 4) {
@@ -275,11 +307,7 @@ export default class Profile extends Component {
     this.loadValuesFromFile()
         .catch((error) => console.log("Error loading profile from file."))
         .finally(() => this.setState({isLoaded: true}));
-
-    
   }
-
-
 
   getDateCreated() {
     return this.state.dateCreated;
@@ -303,126 +331,131 @@ export default class Profile extends Component {
     return this.state.colorScheme;
   }
 
+  getPieChart() {
+    if(CryptoExchanger.getTotalCryptoValue() > 0) {
+      return (<PieChart
+        data={this.getPieChartData()}
+        width={Dimensions.get('window').width - 16}
+        height={220}
+        chartConfig={{
+          backgroundColor: 'blue',
+          backgroundGradientFrom: '#eff3ff',
+          backgroundGradientTo: '#efefef',
+          decimalPlaces: 2,
+          color: (opacity = 1) => (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+          style: {
+            borderRadius: 16,
+          },
+        }}
+        style={{
+          color: 'white',
+          marginVertical: 8,
+        }}
+        accessor="population"
+        backgroundColor={getAppStyleSet().backgroundColor.backgroundColor}
+        paddingLeft="15"
+        //absolute //for the absolute number remove if you want percentage
+      />);
+    }      
+  }
+
   getPieChartData() {
     var data = Profile.formatCryptoValueArray(CryptoExchanger.getCryptoValueArray());
     var colorGradient = 255 / data.length;
     var color = 0;
     for(var i = 0; i < data.length; i++) {
-      data[i].color = "rgb(" + color + "," + color + "," + color + ")";
+      //data[i].color = "rgb(" + color + "," + color + "," + color + ")";
+      data[i].color = Profile.colorsArray[i];
       data[i].legendFontSize = 15;
-      data[i].legendFontColor = "black";
+      data[i].legendFontColor = getAppStyleSet().primColor.color;
       color = Math.trunc(color + colorGradient);
     }
     return data;
   }
-
-  getCryptoListNetWorthTags() {
-    var netWorthList = CryptoExchanger.getNetWorthList();
-    return (
-      <View>
-        {netWorthList.map( (currNetWorth) => (<Text style={[styles.statsText, styles.statsSubtext]}>{currNetWorth}</Text>) )}
-      </View>
-    );
+  
+  // Takes in the number of a cryptocurrencies net profit and returns the text which 
+  // is used in the profile to represent it, does not affect the style of the text
+  getCryptoListTagProfitText(inNum) {
+    inNum = parseFloat(inNum).toFixed(2);
+    var prefix;
+    if(inNum > 0)
+      prefix = "+$";
+    else if(inNum < 0)
+      prefix = "-$";
+    else
+      prefix = "$";
+    var inNum = Math.abs(inNum);
+    return prefix + inNum;
   }
 
-  // Returns a collection of Text components which represents the profits of all
-  // of the cryptocurrencies in the portfolio
+  static getCoinName(inCryptoObj) {
+    if(inCryptoObj != null)
+      return inCryptoObj.getCoinName();
+    return "null";
+  }
+
+  // Returns a collection of Text components which represents the profits or values of all
+  // of the cryptocurrencies in the portfolio.
   getCryptoListTags(profits) {
-    // gets an array containing number values for the net profits of all the
-    // individual cryptocurrencies in the portolio
     var cryptoArray = CryptoExchanger.getCryptoExchangerArray();
+    if(cryptoArray == null ||
+       cryptoArray.length <= 0)
+      return;
+
+    console.log("cryptoArray upon draw: " + cryptoArray);
+
+    if(profits) {
+      return cryptoArray.map( (cryptoObj) => (
+        <View style={ styles.statsRow }>
+          <View style={ styles.statsContainerLeft }>
+            <Text style={ [styles.statsTextLabel, styles.statsSubtext] }>
+              {Profile.getCoinName(cryptoObj)}
+            </Text>
+          </View>
+          <View style={ styles.statsContainerRight }>
+            <Text style={ [styles.statsText, this.getProfitColor(parseFloat(cryptoObj.getNetProfit()).toFixed(2), true)] } >
+            {this.getCryptoListTagProfitText(cryptoObj.getNetProfit())}
+            </Text>
+          </View>
+        </View>
+      ));
+    }
     return cryptoArray.map( (cryptoObj) => (
-          <View style={ styles.statsRow }>
-            <View style={ styles.statsContainerLeft }><Text style={ [styles.statsTextLabel, styles.statsSubtext] } >{cryptoObj.getCoinName()}</Text></View>
-            <View style={ styles.statsContainerRight }><Text style={ [styles.statsText, styles.statsSubtext] } >${profits?round(cryptoObj.getNetProfit(), 2):round(cryptoObj.getCurrentValue(), 2)}</Text></View>
-          </View>
-        ));
-  }
-
-  getCryptoListSubtextTags() {
-    var nameList = CryptoExchanger.getCryptoNameList();
-    return (
-      <View>
-        {nameList.map((cryptoName, i) => (<Text style={[styles.statsTextLabel, styles.statsSubtext]}>{cryptoName}</Text>))}
+      <View style={ styles.statsRow }>
+        <View style={ styles.statsContainerLeft }>
+          <Text style={ [styles.statsTextLabel, styles.statsSubtext] }>
+            {Profile.getCoinName(cryptoObj)}
+          </Text>
+        </View>
+        <View style={ styles.statsContainerRight }>
+          <Text style={ [styles.statsText, styles.statsSubtext] } >
+            ${round(cryptoObj.getCurrentValue(), 2)}
+          </Text>
+        </View>
       </View>
-    );
+    ));
   }
 
-  isResetDialogVisible() {
-    return this.state.resetDialogVisible;
-  }
-
-  getResetDialog() {
-    return (
-      <Modal
-        visible={this.state.resetDialogVisible}
-        transparent={true}
-        onRequestClose={() => {
-          this.setState({resetDialogVisible: false});
-        }} >
-
-          <View style={styles.centeredContainer}>
-
-            <View style={ styles.dialogContainer } >
-
-              <View style={ styles.dialogRow }>
-                <Text style={ styles.dialogText }>Are you sure you would like to reset your profile?</Text>
-              </View>
-
-              <View style={ styles.dialogRow }>
-
-                <TouchableOpacity
-                  style={ styles.dialogButton }
-                  onPress={() => {
-                    console.log("Yes button pressed...");
-                    this.resetProfile();
-                    this.setState({resetDialogVisible: false});
-                  }} >
-                  <View style={styles.dialogTextContainer}>
-                    <Text style={styles.dialogText}>Yes</Text>
-                  </View>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={ styles.dialogButton }
-                  onPress={() => {
-                    this.setState({resetDialogVisible: false});
-                  }} >
-                  <View style={styles.dialogTextContainer}>
-                    <Text style={styles.dialogText}>No</Text>
-                  </View>
-                </TouchableOpacity>
-
-                {/**<Button title="close" onPress={() => {
-                  console.log("Yes button pressed...");
-                  this.resetProfile();
-                  this.setState({resetDialogVisible: false});
-                }} />**/}
-
-              </View>
-
-            </View>
-
-          </View>
-
-      </Modal>
-    );
-  }
-
-
-
-  setResetDialogVisible(inVisible) {
-    this.setState({resetDialogVisible: inVisible});
+  getProfitColor(inNum, isSubtext) {
+    if(isSubtext && inNum == 0) {
+      return styles.statsSubtext;
+    } else if(isSubtext && inNum > 0) {
+      return styles.greenStatsSubtext;
+    } else if(isSubtext && inNum < 0) {
+      return styles.redStatsSubtext;
+    } else if(inNum == 0) {
+      return getAppStyleSet().primColor; 
+    } else if(inNum > 0) {
+      return styles.greenStatsText;
+    } else if(inNum < 0) {
+      return styles.redStatsText;
+    }
   }
 
   resetProfile() {
-    console.log("Reset profile button pressed.");
-
     this.setState({
       dateCreated: new Date(),
     }, () => this.saveValuesToFile());
-
-    CryptoExchanger.resetCryptoExchangers();
-    ExchangerComponent.forceUpdate();
   }
 
 
@@ -452,84 +485,75 @@ export default class Profile extends Component {
     });
   }
 
-
-
   render() {
-    if(!this.state.isLoaded) {
+
+    {/* If the data for this component or the CryptoExchangers are not loaded, render a loading screen */}
+    if(!this.state.isLoaded || !CryptoExchanger.getAreCryptosLoaded()) {
       return <AppLoading />;
+    
+    {/* Main rendering code */}
     } else {
+
       return (
+
        <ScrollView
-        style={ styles.screenContainer }
+        style={ [styles.screenContainer, getAppStyleSet().backgroundColor] }
         contentContainerStyle={ styles.screenContainerContent }>
 
-          <PieChart
-            data={this.getPieChartData()}
-            width={Dimensions.get('window').width - 16}
-            height={220}
-            chartConfig={{
-              backgroundColor: '#1cc910',
-              backgroundGradientFrom: '#eff3ff',
-              backgroundGradientTo: '#efefef',
-              decimalPlaces: 2,
-              color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-              style: {
-                borderRadius: 16,
-              },
-            }}
-            style={{
-              marginVertical: 8,
-              borderRadius: 16,
-            }}
-            accessor="population"
-            backgroundColor="transparent"
-            paddingLeft="15"
-            //absolute //for the absolute number remove if you want percentage
-          />
+          { this.getPieChart() }
 
-          <View style={ [styles.statsContainer, styles.subcontainerSpacer] } >
+          {/* The stats container  */}
+          <View style={ [styles.statsContainer, styles.subcontainerSpacer, getAppStyleSet().borderColor] } >
+
+            {/* Net profit row */}
             <View style={ styles.statsRow }>
-              <View style={ styles.statsContainerLeft }><Text style={ styles.statsTextLabel } >date started</Text></View>
-              <View style={ styles.statsContainerRight }><Text style={ styles.statsText } >{this.getDateCreatedString()}</Text></View>
+              <View style={ styles.statsContainerLeft }>
+                <Text style={ [styles.statsTextLabel, getAppStyleSet().primColor] } >net profit</Text>
+              </View>
+              <View style={ styles.statsContainerRight }>
+                <Text style={ 
+                  [styles.statsText, this.getProfitColor(parseFloat(CryptoExchanger.getTotalProfit()).toFixed(2), false)] 
+                }>{this.getCryptoListTagProfitText(CryptoExchanger.getTotalProfit())}</Text>
+              </View>
             </View>
-            <View style={ styles.statsRow }>
-              <View style={ styles.statsContainerLeft }><Text style={ styles.statsTextLabel } >profile age</Text></View>
-              <View style={ styles.statsContainerRight }><Text style={ styles.statsText } >{this.getProfileAge()} days</Text></View>
-            </View>
-            <View style={ styles.statsRow }>
-              <View style={ styles.statsContainerLeft }><Text style={ styles.statsTextLabel } >net profit</Text></View>
-              <View style={ styles.statsContainerRight }><Text style={ styles.statsText } >${round(CryptoExchanger.getTotalProfit(), 2)}</Text></View>
-            </View>
+            
+            {/* Collection of rows with individual profits for each cryptocurrency */}
             { this.getCryptoListTags(true) }
+            
+            {/* Net worth row */}
             <View style={ styles.statsRow }>
-              <View style={ styles.statsContainerLeft }><Text style={ styles.statsTextLabel } >net worth</Text></View>
-              <View style={ styles.statsContainerRight }><Text style={ styles.statsText } >${round(CryptoExchanger.getTotalCurrentNetValue(), 2)}</Text></View>
+              <View style={ styles.statsContainerLeft }><Text style={ [styles.statsTextLabel, getAppStyleSet().primColor] } >net worth</Text></View>
+              <View style={ styles.statsContainerRight }><Text style={ [styles.statsText, getAppStyleSet().primColor] } >${round(CryptoExchanger.getTotalCurrentNetValue(), 2)}</Text></View>
             </View>
+            
+            {/* Dollar portion of net worth breakdown */} 
             <View style={ styles.statsRow }>
               <View style={ styles.statsContainerLeft }><Text style={ [styles.statsTextLabel, styles.statsSubtext] }>dollars</Text></View>
               <View style={ styles.statsContainerRight }><Text style={ [styles.statsText, styles.statsSubtext] } >${round(CryptoExchanger.getDollars(), 2)}</Text></View>
             </View>
+            
+            {/* Collection of rows with individual net worths for each cryptocurrency */}
             { this.getCryptoListTags(false) }
 
+            {/* Date started row */}
+            <View style={ styles.statsRow }>
+              <View style={ styles.statsContainerLeft }><Text style={ [styles.statsTextLabel, getAppStyleSet().primColor] } >date started</Text></View>
+              <View style={ styles.statsContainerRight }><Text style={ [styles.statsText, getAppStyleSet().primColor] } >{this.getDateCreatedString()}</Text></View>
+            </View>
 
+            {/* Profile age row */}
+            <View style={ styles.statsRow }>
+              <View style={ styles.statsContainerLeft }><Text style={ [styles.statsTextLabel, getAppStyleSet().primColor] } >profile age</Text></View>
+              <View style={ styles.statsContainerRight }><Text style={ [styles.statsText, getAppStyleSet().primColor] } >{this.getProfileAge()} days</Text></View>
+            </View>
 
-          </View>
+            {/* Starting cash row */}
+            <View style={ styles.statsRow }>
+              <View style={ styles.statsContainerLeft }><Text style={ [styles.statsTextLabel, getAppStyleSet().primColor] } >starting cash</Text></View>
+              <View style={ styles.statsContainerRight }><Text style={ [styles.statsText, getAppStyleSet().primColor] } >${CryptoExchanger.getStartingDollars()}</Text></View>
+            </View>
 
-          <View style={ [styles.buttonContainer, styles.subcontainerSpacer] } >
-
-            <TouchableOpacity
-              style={ styles.profileButton }
-              onPress={ () => {
-                this.setState({resetDialogVisible: true});
-              }} >
-              <View style={ styles.iconContainer }>
-                <Foundation name="loop" size={34} color="white" />
-              </View>
-            </TouchableOpacity>
-
-            {this.getResetDialog()}
-
-          </View>
+</View>
 
         </ScrollView>
       );

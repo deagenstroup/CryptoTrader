@@ -14,8 +14,10 @@ import { SearchBar } from 'react-native-elements';
 
 import { Entypo } from '@expo/vector-icons';
 
+import ExchangerScreen from "./ExchangerScreen.js";
 import CryptoExchanger from "./CryptoExchanger.js";
 import Profile from "./Profile.js";
+import { getAppStyleSet } from "./App.js";
 
 import { ConfirmationModal } from "./MiscComponents.js";
 
@@ -40,9 +42,9 @@ const styles = StyleSheet.create({
   // },
 
   screenRow: {
-    width: '75%',
-    marginTop: 10,
-    marginBottom: 10,
+    width: '100%',
+    //marginTop: 10,
+   // marginBottom: 10,
   },
 
   listRowContainer: {
@@ -51,6 +53,9 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
     alignItems: "center",
     // margin: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'grey',
+    paddingLeft: "16%",
     padding: 6,
   },
 
@@ -84,7 +89,7 @@ const styles = StyleSheet.create({
   },
 
   listText: {
-    fontFamily: 'TitilliumWebSemiBold',
+    fontFamily: 'TitilliumWeb',
     fontSize: 24,
   },
 
@@ -108,7 +113,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     marginRight: 8,
     borderWidth: 2,
-    borderColor: 'black',
   },
 
 });
@@ -123,10 +127,42 @@ const blueStyles = StyleSheet.create({
 
 
 export default class CoinSearchScreen extends Component {
+  
+  static coinSearchScreenComponent; 
+
+  static forceUpdate() {
+    if(CoinSearchScreen.coinSearchScreenComponent != null)
+      CoinSearchScreen.coinSearchScreenComponent.forceUpdate();
+  }
+
+  static setSearchText(text) {
+    console.log("Static SearchText: " + text);
+    if(CoinSearchScreen.coinSearchScreenComponent != null)
+      CoinSearchScreen.coinSearchScreenComponent.setSearchText(text);
+  }
+
+  // Takes in an array filled with objects that have the name and id of various
+  // cryptocurrencies and sorts them alphabetically according to name
+  static sortCryptoArray(inArray) {
+    var i, j, min;
+    for(i = 0; i < inArray.length - 1; i++) {
+      min = i;
+      for(j = i+1; j < inArray.length; j++) {
+        if(inArray[j].name.toLowerCase() < inArray[min].name.toLowerCase()) {
+          var temp = inArray[j];
+          inArray[j] = inArray[min];
+          inArray[min] = temp;
+        }
+      }  
+    }  
+    return inArray;
+  }  
 
   constructor(props) {
     super(props);
 
+    CoinSearchScreen.coinSearchScreenComponent = this;
+    
     this.state = {
 
       // The text that the user enters to search the list of cryptos
@@ -155,12 +191,18 @@ export default class CoinSearchScreen extends Component {
     this.fetchCryptoList();
   }
 
+  /* Get the list of avaiable cryptocurrencies which can be searched and added to the
+     portfolio */
   fetchCryptoList() {
     fetch("https://api.coingecko.com/api/v3/coins/list")
       .then((response) => response.json())
       .then((json) => {
+        // map each cryptocurrency from the call into the availableCryptos array and sort 
+        // it alphabetically
         var cryptoArry = [];
         json.map((currObj, i) => cryptoArry[i] = {name: currObj.name, id: currObj.id} );
+        cryptoArry = CoinSearchScreen.sortCryptoArray(cryptoArry);
+        console.log(cryptoArry);
         this.setState({availableCryptos: cryptoArry, searchResults: []},
           () => this.setState({cryptoListLoaded: true}));
       })
@@ -169,6 +211,7 @@ export default class CoinSearchScreen extends Component {
 
 
   setSearchText(inSearchText) {
+    console.log("SearchText: " + inSearchText);
     this.setState({searchText: inSearchText}, () => {
       this.updateSearchResults();
     })
@@ -180,19 +223,33 @@ export default class CoinSearchScreen extends Component {
         return;
       }
 
-      var results = [];
+      //var results = this.iterSearchResults(this.state.searchText.toLowerCase());
       // this.state.searchResults.splice(0, this.state.searchResults.length);
+      var results = [];
       this.binSearchResults((item) => results.push(item), 0, this.state.availableCryptos.length-1, this.state.searchText.toLowerCase());
       // this.forceUpdate();
+      results = CoinSearchScreen.sortCryptoArray(results);
       this.setState({searchResults: results});
   }
 
+  // Searches through the available cryptocurrencies and returns an array filled with
+  // those whose name has the search text within
+  iterSearchResults(searchText) {
+    var results = [];
+    for(var i = 0; i < this.state.availableCryptos.length; i++) {
+      if(this.state.availableCryptos[i].name.substring(0, searchText.length).toLowerCase()
+         === searchText)
+        results.push(this.state.availableCryptos[i]);
+    }  
+    return results;
+  }  
+
   binSearchResults(pushFunc, leftI, rightI, searchText) {
     if(rightI >= leftI) {
-      var mid = Math.trunc(leftI + (rightI - leftI) / 2);
+      var mid = Math.trunc(leftI + ((rightI - leftI) / 2));
 
       var midSubString = this.state.availableCryptos[mid].name.substring(0, searchText.length).toLowerCase();
-      if(midSubString === searchText) {
+      if(midSubString == searchText) {
         pushFunc(this.state.availableCryptos[mid]);
         this.binSearchResults(pushFunc, leftI, mid-1, searchText);
         this.binSearchResults(pushFunc, mid+1, rightI, searchText);
@@ -205,28 +262,7 @@ export default class CoinSearchScreen extends Component {
   }
 
 
-  getStyleSet() {
-    var styleSet = Profile.getColorScheme();
-    if(styleSet === "light") {
-      return styles;
-    } else if(styleSet === "blue") {
-      return blueStyles;
-    }
-  }
-
-  getSearchBox() {
-    return (
-      <SearchBar
-        containerStyle={styles.searchBarContainer}
-        inputContainerStyle={this.getStyleSet().searchBarInputContainer}
-        inputStyle={styles.searchBarInput}
-        placeholder="Search cryptocurrencies..."
-        onChangeText={(text) => this.setSearchText(text)}
-        value={this.state.searchText} />
-    );
-  }
-
-  getCryptoListBox(inCryptoObj, i) {
+    getCryptoListBox(inCryptoObj, i) {
 
     // The plus or minux button which adds or removes a selected cryptocurrency
     // from the portfolio
@@ -238,23 +274,24 @@ export default class CoinSearchScreen extends Component {
         // If this cryptocurrency does not exist in the porfolio already, add a plus button
         if(CryptoExchanger.getCryptoExchanger(inCryptoObj.id) == null) {
           return (<TouchableOpacity
-            style={styles.listButton}
+            style={[styles.listButton, getAppStyleSet().filledButton]}
             onPress={() => {
               CryptoExchanger.addCryptoExchanger(inCryptoObj.id, inCryptoObj.name);
               this.setState({selectedResultIndex: -1});
+              ExchangerScreen.forceUpdate();
             }}>
-            <Entypo name="plus" size={18} color="black" />
+            <Entypo name="plus" size={18} color={getAppStyleSet().filledButtonLabel.color} />
           </TouchableOpacity>);
         }
 
         // If this cryptocurrency already exists in the portfolio, add a minus button
         else {
           return (<TouchableOpacity
-            style={styles.listButton}
+            style={[styles.listButton, getAppStyleSet().filledButton]}
             onPress={() => {
               this.setState({coinRemovalDialogVisible: true});
             }}>
-            <Entypo name="minus" size={18} color="black" />
+            <Entypo name="minus" size={18} color={getAppStyleSet().filledButtonLabel.color} />
           </TouchableOpacity>);
         }
 
@@ -274,7 +311,9 @@ export default class CoinSearchScreen extends Component {
         }}>
         <View style={styles.listRowContainer } >
           { listButton() }
-          <Text style={ styles.listText }>{inCryptoObj.name}</Text>
+          <Text style={ [styles.listText, getAppStyleSet().primColor] }>
+            {inCryptoObj.name}
+          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -297,8 +336,6 @@ export default class CoinSearchScreen extends Component {
       return (
         <View style={ styles.screenContainer }>
 
-          {this.getSearchBox()}
-
           <ScrollView style={ [styles.scrollBoxContainer, styles.screenRow] }>
             <Text>Loading list of available cryptocurrencies...</Text>
           </ScrollView>
@@ -311,8 +348,6 @@ export default class CoinSearchScreen extends Component {
 
     return (
       <View style={ styles.screenContainer }>
-
-        {this.getSearchBox()}
 
         <ScrollView style={ [styles.scrollBoxContainer, styles.screenRow] }>
           { this.state.searchResults.map((cryptoObj, i) => this.getCryptoListBox(cryptoObj, i))}

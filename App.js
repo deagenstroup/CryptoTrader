@@ -3,11 +3,11 @@ import AppLoading from 'expo-app-loading';
 import { StatusBar } from 'expo-status-bar';
 import * as Font from 'expo-font';
 import { useFonts } from 'expo-font';
-import { Feather } from '@expo/vector-icons';
+import { Ionicons, Feather, Foundation } from '@expo/vector-icons';
 
 /* components imported from React */
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, LogBox } from 'react-native';
+import React, { useState, useContext } from 'react';
+import { TouchableOpacity, StyleSheet, Text, View, LogBox } from 'react-native';
 
 /* components imported from the React-Navigation library */
 import { NavigationContainer } from '@react-navigation/native';
@@ -16,18 +16,129 @@ import {
   DrawerContentScrollView,
   DrawerItemList,
   DrawerItem,
+  DrawerToggleButton,
 } from '@react-navigation/drawer';
+
+import { SearchBar } from 'react-native-elements';
 
 /** components and classes imported from other files **/
 import CryptoExchanger from "./CryptoExchanger.js";
 import Profile from "./Profile.js";
 import ExchangerScreen from "./ExchangerScreen.js";
+import ExchangerComponent from "./Exchanger.js";
 import CoinSearchScreen from "./CoinSearchScreen.js";
-import { lightStyles, darkStyles } from "./MiscComponents.js";
+import { 
+  lightStyles, 
+  darkStyles,
+  ConfirmationModal,
+  NumberInputModal 
+} from "./MiscComponents.js";
 
 LogBox.ignoreAllLogs()
 
+
+const menuFontFamily = "Aldrich"
+const styles = StyleSheet.create({
+  screenHeaderFont : {
+    fontFamily: menuFontFamily,
+    fontSize: 24,
+  },
+  labelFont: {
+    fontFamily: menuFontFamily,
+    fontSize: 16,
+  },
+
+  titleText: {
+    fontFamily: menuFontFamily,
+    fontSize: 20,
+  },
+  titleSubText: {
+    fontFamily: menuFontFamily,
+    fontSize: 16,
+    color: 'grey',
+  },
+  titleBoxContainer: {
+    flex: 0,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 10,
+  },
+  outerDrawerContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    borderColor: 'yellow',
+    borderWidth: 2,
+    paddingTop: 10,
+  },
+  upperDrawerContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
+    alignItems: 'stretch',
+  },
+  lowerDrawerContainer: {
+    flex: 1,
+    flexDirection: 'column-reverse',
+    justifyContent: 'flex-end',
+    alignItems: 'stretch',
+  },  
+  drawerButtonContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
+  drawerButton: {
+    flex: 1,
+    margin: 4,
+    height: 46,
+    borderRadius: 6,
+  },
+  buttonIcon: {
+    flex: 0, 
+    justifyContent: 'center',
+    //paddingTop: 1,
+    //paddingLeft: ,
+    alignItems: 'center',
+  },
+  iconContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchBarContainer: {
+    flex:0,
+    width: '100%',
+    //marginTop: 10,
+    //marginBottom: 10,
+    
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    shadowColor: 'white',
+    borderBottomColor: 'transparent',
+    borderTopColor: 'transparent'
+  },
+
+  searchBarInputContainer: {
+    borderRadius: 6,
+  },
+
+  searchBarInput: {
+    fontSize: 12,
+  },
+
+});
+
 var theme = "light";
+const ThemeContext = React.createContext({
+  styleSet: lightStyles,
+  toggleStyleSet: () => {},
+});
+const Drawer = createDrawerNavigator();
+
 export function getAppStyleSet() {
   if(theme == null)
     return darkStyles;
@@ -39,40 +150,88 @@ export function getAppStyleSet() {
   }
 }
 
-const styles = StyleSheet.create({
-  screenHeaderFont : {
-    fontFamily: "Aldrich",
-    fontSize: 24,
-  },
-  labelFont: {
-    fontFamily: "Aldrich",
-    fontSize: 16,
-  },
-});
 
-const Drawer = createDrawerNavigator();
+function getColorModeIcon() { 
+  if(theme === "light")
+    return <Ionicons name="md-moon" size={28} color={getAppStyleSet().filledButtonLabel.color} style={styles.buttonIcon} />;
+  else 
+    return <Ionicons name="md-sunny" size={28} color={getAppStyleSet().filledButtonLabel.color} style={styles.buttonIcon}/>; 
+}
 
 /* Custom items which can be selected in the Navigation Drawer */
 const CustomDrawerContent = (props) => {
+  var theme = useContext(ThemeContext);
+  const [resetDialogVisibility, setResetDialogVisibility] = useState(false);
+  const [inputDialogVisibility, setInputDialogVisibility] = useState(false);
   return (
-    <DrawerContentScrollView {...props} >
+    <DrawerContentScrollView 
+      contentContainerStyle={{flex:1, justifyContent: 'space-between', alignItems: 'stretch'}} 
+      {...props} >
 
-      <DrawerItem
-        label="Close"
-        onPress={() => props.navigation.closeDrawer()}
-        icon={(focused, size) => (
-            <Feather
-              name="arrow-left-circle"
-              size={24.0}
-              color="black"
-              style={{marginLeft: 9}}
-              />
-        )}
-        {... props}
-      />
+      {/* Flexbox which places components from the top of the drawer down */}
+      <View style={styles.upperDrawerContainer}>
+       
+        {/* Flexbox which contains the title within the drawer */}
+        <View style={styles.titleBoxContainer}>
+          <Text style={[styles.titleText, theme.styleSet.primColor]}>CryptoTrader</Text>
+          <Text style={styles.titleSubText}>V1.0</Text>
+        </View>
 
-      <DrawerItemList {...props} />
+        <DrawerItemList {...props} />
+      </View>
 
+      {/* Flexbox which places components from the bottom of the drawer up */}
+      <View style={styles.lowerDrawerContainer}>
+
+        {/* Row flexbox which contains the buttons */}
+        <View style={styles.drawerButtonContainer}>
+
+          {/* Reset button */} 
+          <TouchableOpacity
+            style={ [styles.drawerButton, theme.styleSet.filledButton]}
+            onPress={() => setResetDialogVisibility(true)}>
+
+            <View style={ styles.iconContainer }>
+              <Foundation name="loop" 
+                          size={34} 
+                          color={theme.styleSet.filledButtonLabel.color} 
+                          style={styles.buttonIcon} />
+            </View>
+
+          </TouchableOpacity>
+
+          {/* Dark/Light mode button */}
+          <TouchableOpacity
+            style={ [styles.drawerButton, theme.styleSet.filledButton]}
+            onPress={theme.toggleStyleSet}>
+            <View style={ styles.iconContainer }>
+              {getColorModeIcon()}
+            </View>
+          </TouchableOpacity>
+
+        </View> 
+
+      </View>
+
+      <ConfirmationModal  
+        visible={resetDialogVisibility}
+        setVisibility={(visibility) => setResetDialogVisibility(visibility)}
+        promptString="Are you sure you would like to reset your profile?"
+        onConfirmation={() => {
+          setInputDialogVisibility(true);
+        }}/>
+
+      <NumberInputModal
+        visible={inputDialogVisibility}
+        setVisibility={(visibility) => setInputDialogVisibility(visibility)}
+        promptString="Input starting cash:"
+        onConfirmation={(inputNum) => {
+          CryptoExchanger.resetCryptoExchangers(inputNum);
+          Profile.resetProfile();
+          ExchangerComponent.forceUpdate();
+          Profile.forceProfileUpdate();
+          CoinSearchScreen.forceUpdate(); 
+        }}/> 
     </DrawerContentScrollView>
   );
 }
@@ -80,15 +239,17 @@ const CustomDrawerContent = (props) => {
 /* The Navigation Drawer itself, which can be swiped to screen from the left for
    the user to select different screens within the app */
 const NavDrawer = () => {
+  var theme= useContext(ThemeContext);
+
   return (
     <Drawer.Navigator
-      sceneContainerStyle={getAppStyleSet().backgroundColor}
+      sceneContainerStyle={theme.styleSet.backgroundColor}
       drawerContent={props => <CustomDrawerContent {...props} />}
       drawerContentOptions={{
-        activeTintColor: getAppStyleSet().backgroundColor.backgroundColor,//'#ffffff',
-        activeBackgroundColor: getAppStyleSet().primColor.color,//'#2791e3',
-        inactiveTintColor: getAppStyleSet().primColor.color,
-        inactiveBackgroundColor: getAppStyleSet().backgroundColor.backgroundColor,
+        activeTintColor: theme.styleSet.backgroundColor.backgroundColor,//'#ffffff',
+        activeBackgroundColor: theme.styleSet.primColor.color,//'#2791e3',
+        inactiveTintColor: theme.styleSet.primColor.color,
+        inactiveBackgroundColor: theme.styleSet.backgroundColor.backgroundColor,
         labelStyle: styles.labelFont,
       }}
       screenOptions={{
@@ -96,11 +257,14 @@ const NavDrawer = () => {
           flex: 1,
           padding: 0,
           margin: 0,
-          //backgroundColor:'red'
-        } ],
+        }],
         headerShown: true,
+        headerStyle: {
+          backgroundColor: theme.styleSet.backgroundColor.backgroundColor,
+        },
+        headerTintColor: theme.styleSet.primColor.color,
       }}
-      drawerStyle={[getAppStyleSet().backgroundColor, {
+      drawerStyle={[theme.styleSet.backgroundColor, {
         width: 200,
       }]}
       style={{backgroundColor: "red"}}
@@ -130,7 +294,21 @@ const NavDrawer = () => {
           component={CoinSearchScreen}
           options={{
             drawerLabel: "Search",
-            headerTitle: "Crypto Search",
+            headerTitle: () => {
+              const [searchText, setSearchText] = useState();
+              return (
+                <SearchBar
+                  containerStyle={styles.searchBarContainer}
+                  inputContainerStyle={styles.searchBarInputContainer}
+                  inputStyle={styles.searchBarInput}
+                  placeholder="Search cryptocurrencies..."
+                  onChangeText={(text) => {
+                    CoinSearchScreen.setSearchText(text);
+                    setSearchText(text);
+                  }}
+                  value={searchText} />
+              );
+            },
           }}
           />
 
@@ -138,8 +316,18 @@ const NavDrawer = () => {
   );
 }
 
+function toggleTheme() {
+  if(theme === "light")
+    theme = "dark";
+  else
+    theme = "light";
+  Profile.forceProfileUpdate();
+  ExchangerScreen.forceUpdate();
+  CoinSearchScreen.forceUpdate();
+}
+
 export default function App() {
-  appComponent = this;
+  //appComponent = this;
   
   const [fontsLoaded] = useFonts({
     TitilliumWeb: require("./fonts/TitilliumWeb-Regular.ttf"),
@@ -149,6 +337,8 @@ export default function App() {
     HeeboRegular: require("./fonts/Heebo-Regular.ttf"),
     HeeboMedium: require("./fonts/Heebo-Medium.ttf"),
   });
+
+  const [currStyleSet, setCurrStyleSet] = useState(lightStyles); 
 
   const [cryptoLoaded, setCryptoLoaded] = useState(false);
   const [cryptoPriceLoaded, setCryptoPriceLoaded] = useState(false);
@@ -160,7 +350,6 @@ export default function App() {
       .catch((error) => console.log("There was an error loading crypto exchangers..."))
       .then(() => {
         setCryptoLoaded(true);
-        // CryptoExchanger.saveCryptoExchangers();
       });
   }
 
@@ -168,10 +357,18 @@ export default function App() {
     return <AppLoading />;
   } else {
     return (
-      <NavigationContainer
-        style={getAppStyleSet().backgroundColor}>
-        <NavDrawer />
-      </NavigationContainer>
+      <ThemeContext.Provider value={{styleSet: currStyleSet, toggleStyleSet: () => {
+        if(currStyleSet === lightStyles)
+          setCurrStyleSet(darkStyles);
+        else
+          setCurrStyleSet(lightStyles);
+        toggleTheme();
+      }}}>
+        <NavigationContainer
+          style={currStyleSet.backgroundColor}>
+          <NavDrawer />
+        </NavigationContainer>
+      </ThemeContext.Provider>
     );
   }
 }
