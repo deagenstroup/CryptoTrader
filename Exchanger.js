@@ -375,7 +375,8 @@ export default class ExchangerComponent extends Component {
   }
 
   componentWillUnmount() {
-    this.backHandler.remove();
+    if(this.backHandler != null)
+      this.backHandler.remove();
   }
   
   cancelExchange() {

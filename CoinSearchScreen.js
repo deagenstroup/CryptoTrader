@@ -260,7 +260,7 @@ export default class CoinSearchScreen extends Component {
   }
 
 
-    getCryptoListBox(inCryptoObj, i) {
+  getCryptoListBox(inCryptoObj, i) {
 
     // The plus or minux button which adds or removes a selected cryptocurrency
     // from the portfolio
@@ -297,6 +297,7 @@ export default class CoinSearchScreen extends Component {
 
     }
 
+
     return (
       <TouchableOpacity
         style={styles.screenRow}
@@ -324,12 +325,14 @@ export default class CoinSearchScreen extends Component {
               promptString="Are you sure you would like to remove this cryptocurrency from your portfolio?"
               onConfirmation={() => {
                 var selectedCrypto = this.state.searchResults[this.state.selectedResultIndex];
-                CryptoExchanger.removeCryptoExchanger(selectedCrypto.id, selectedCrypto.name);
+                CryptoExchanger.removeCryptoExchanger(selectedCrypto.id);
                 this.setState({selectedResultIndex: -1});
               }}/>);
   }
 
   render() {
+
+    {/* If the list of available currencies is not loaded, display an app loading screen */}
     if(!this.state.cryptoListLoaded) {
       return (
         <View style={ styles.screenContainer }>
@@ -344,6 +347,7 @@ export default class CoinSearchScreen extends Component {
       );
     }
 
+    {/* Available currencies have been loaded so display them */}
     return (
       <View style={ styles.screenContainer }>
         
@@ -351,6 +355,7 @@ export default class CoinSearchScreen extends Component {
           bannerSize="smartBannerPortrait"
           adUnitID="ca-app-pub-3940256099942544/6300978111" />
 
+        {/* Map each currency search result to a GUI component which displays the currency */}
         <ScrollView style={ [styles.scrollBoxContainer, styles.screenRow] }>
           { this.state.searchResults.map((cryptoObj, i) => this.getCryptoListBox(cryptoObj, i))}
         </ScrollView>
@@ -359,6 +364,7 @@ export default class CoinSearchScreen extends Component {
 
       </View>
     );
+
   }
 
 }

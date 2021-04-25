@@ -617,6 +617,9 @@ export default class CryptoExchanger {
   }
 
   sellCrypto(inAmount, inDollarsWorth) {
+    if(inAmount <= 0)
+      return;
+
     var newCoinAmount = this.coin, newDollarAmount = CryptoExchanger.dollars;
 
     // Get the amount of crypto being sold
