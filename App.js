@@ -141,10 +141,16 @@ const styles = StyleSheet.create({
 });
 
 var theme = "light";
-const ThemeContext = React.createContext({
+
+// Initializing the a context for a dark/light theme, which has a style set for the
+// currently selected theme and a handler for changing between the two themes
+// (which is defined in the context provider container) 
+export const ThemeContext = React.createContext({
   styleSet: lightStyles,
   toggleStyleSet: () => {},
 });
+
+
 const Drawer = createDrawerNavigator();
 
 export function getAppStyleSet() {
@@ -254,7 +260,7 @@ const CustomDrawerContent = (props) => {
 /* The Navigation Drawer itself, which can be swiped to screen from the left for
    the user to select different screens within the app */
 const NavDrawer = () => {
-  var theme= useContext(ThemeContext);
+  var theme = useContext(ThemeContext);
 
   return (
     <Drawer.Navigator
@@ -353,6 +359,7 @@ export default function App() {
     HeeboMedium: require("./fonts/Heebo-Medium.ttf"),
   });
 
+  // Style sheet object which contains the correct styles for the current theme (light or dark) 
   const [currStyleSet, setCurrStyleSet] = useState(lightStyles); 
 
   // Variable which specifies if the CryptoExchanger objects have been loaded from file
@@ -380,14 +387,21 @@ export default function App() {
   if(!fontsLoaded || !cryptoLoaded) {
     return <AppLoading />;
   } else {
+
     return (
-      <ThemeContext.Provider value={{styleSet: currStyleSet, toggleStyleSet: () => {
-        if(currStyleSet === lightStyles)
-          setCurrStyleSet(darkStyles);
-        else
-          setCurrStyleSet(lightStyles);
-        toggleTheme();
-      }}}>
+
+      /* Wrap the entire application in a context which provides access to and
+          ability to change between light and dark themes. */
+      <ThemeContext.Provider 
+        value={{
+          styleSet: currStyleSet, 
+          toggleStyleSet: () => {
+            if(currStyleSet === lightStyles)
+              setCurrStyleSet(darkStyles);
+            else
+              setCurrStyleSet(lightStyles);
+            toggleTheme();
+          } }}>
 
         <NavigationContainer
           style={currStyleSet.backgroundColor}>
@@ -410,6 +424,8 @@ export default function App() {
           }}/> 
 
       </ThemeContext.Provider>
+
     );
   }
+
 }

@@ -28,7 +28,6 @@ export default class CryptoExchanger {
       apps launch and handle all of the logic operations of exchanging the currency **/
   static cryptoExchangerArray = [];
 
-  static cryptoExchangerArrayLength = 0;
 
   /** The total amount of dollars spent buying the cryptocurrencies that have
       been removed from the portfolio **/
@@ -60,7 +59,7 @@ export default class CryptoExchanger {
   }
 
   static getFirstCryptoExchanger() {
-    if(CryptoExchanger.cryptoExchangerArrayLength == 0 || 
+    if(CryptoExchanger.cryptoExchangerArray.length == 0 || 
        CryptoExchanger.cryptoExchangerArray[0] == null)
       return null;
     return CryptoExchanger.cryptoExchangerArray[0];
@@ -73,11 +72,12 @@ export default class CryptoExchanger {
   }
 
   static getCryptoExchangerArray() {
-    var cryptoArray = [];
-    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
+    return CryptoExchanger.cryptoExchangerArray;
+    /*var cryptoArray = [];
+    for(var i = 0; i < CryptoExchanger.cryptoExchangerArray.length; i++) {
       cryptoArray.push(CryptoExchanger.cryptoExchangerArray[i]);
     }
-    return cryptoArray;
+    return cryptoArray;*/
   }
 
   /** Takes in the ID of a cryptocurrency and returns the CryptoExchanger object
@@ -106,7 +106,7 @@ export default class CryptoExchanger {
       cryptocurrencies currently in memory **/
   static getCryptoValueArray() {
     var coinArray = [];
-    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
+    for(var i = 0; i < CryptoExchanger.cryptoExchangerArray.length; i++) {
       coinArray.push({
         name: CryptoExchanger.cryptoExchangerArray[i].getCoinName(),
         population: CryptoExchanger.cryptoExchangerArray[i].getCurrentValue(),
@@ -145,7 +145,6 @@ export default class CryptoExchanger {
   }
 
   static getTotalProfit() {
-    return 0.003;
     var totalDollarBoughtVolume = this.removedDollarBoughtVolume;
     var totalDollarSoldVolume = this.removedDollarSoldVolume;
     var totalCryptoValue = 0;
@@ -159,8 +158,9 @@ export default class CryptoExchanger {
   }
 
   static getCryptoNameList() {
+    console.log("DEBUG: getCryptoNameList called, length: " + CryptoExchanger.cryptoExchangerArray.length);
     var nameArray = [];
-    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
+    for(var i = 0; i < CryptoExchanger.cryptoExchangerArray.length; i++) {
       nameArray.push(CryptoExchanger.cryptoExchangerArray[i].getCoinName());
     }
     return nameArray;
@@ -182,7 +182,6 @@ export default class CryptoExchanger {
   static addCryptoExchanger(inCryptoID, inCryptoName) {
     var newExchanger = new CryptoExchanger(inCryptoID, inCryptoName, false);
     CryptoExchanger.cryptoExchangerArray.push(newExchanger);
-    CryptoExchanger.cryptoExchangerArrayLength++;
     newExchanger.fetchCoinPrice();
     newExchanger.saveCoinsToFile();
     Profile.forceProfileUpdate();
@@ -195,11 +194,10 @@ export default class CryptoExchanger {
 
   static removeCryptoExchanger(inCryptoID) {
     var removedCryptoExchanger;
-    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
+    for(var i = 0; i < CryptoExchanger.cryptoExchangerArray.length; i++) {
       if(inCryptoID == CryptoExchanger.cryptoExchangerArray[i].getCoinID()) {
         removedCryptoExchanger = CryptoExchanger.cryptoExchangerArray.splice(i, 1);
         removedCryptoExchanger[0].sellCrypto(removedCryptoExchanger[0].getCoin(), false);
-        CryptoExchanger.cryptoExchangerArrayLength--;
         break;
       }
     }
@@ -223,7 +221,6 @@ export default class CryptoExchanger {
     Profile.forceProfileUpdate();
     while(CryptoExchanger.cryptoExchangerArray.length > 0) {
       var removedExchanger = CryptoExchanger.cryptoExchangerArray.splice(0, 1);
-      CryptoExchanger.cryptoExchangerArrayLength = CryptoExchanger.cryptoExchangerArrayLength-1;
       removedExchanger[0].reset();
     }
     CryptoExchanger.resetCryptoList()
@@ -252,7 +249,6 @@ export default class CryptoExchanger {
     CryptoExchanger.cryptoExchangerArray.push(new CryptoExchanger("ethereum", "Ethereum", false));
     CryptoExchanger.cryptoExchangerArray.push(new CryptoExchanger("litecoin", "Litecoin", false));
     CryptoExchanger.cryptoExchangerArray.push(new CryptoExchanger("monero", "Monero", false));
-    CryptoExchanger.cryptoExchangerArrayLength = 4;
     CryptoExchanger.areCryptosLoaded = true; 
   }
 
@@ -290,7 +286,6 @@ export default class CryptoExchanger {
       console.log("DEBUG: crypto list loaded from file: " + cryptoList);
       for(var i = 0; i < cryptoList.length; i++) {
         CryptoExchanger.cryptoExchangerArray.push(new CryptoExchanger(cryptoList[i], null, true));
-        CryptoExchanger.cryptoExchangerArrayLength = CryptoExchanger.cryptoExchangerArrayLength + 1;
         await CryptoExchanger.cryptoExchangerArray[i].loadValuesFromFile();
       }
     } catch(error) {
