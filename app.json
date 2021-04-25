@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "CryptoTrader",
-    "slug": "CryptoTrader",
+    "name": "CoinTrader",
+    "slug": "CoinTrader",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -25,7 +25,11 @@
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#FFFFFF"
       },
-      "package": "com.deagenstroup.CryptoTrader"
+      "package": "com.deagenstroup.CoinTrader",
+      "config": {
+        "googleMobileAdsAppId": "ca-app-pub-7446783952765744~8635389875"
+      },
+      "permissions": []
     },
     "web": {
       "favicon": "./assets/favicon.png"

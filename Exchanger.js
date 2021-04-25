@@ -16,6 +16,7 @@ import { getAppStyleSet } from "./App.js";
 import * as FileSystem from 'expo-file-system';
 import CryptoExchanger from './CryptoExchanger';
 import Profile from './Profile.js';
+import { InformationModal } from './MiscComponents.js';
 
 import { LineChart } from 'react-native-chart-kit';
 
@@ -357,6 +358,8 @@ export default class ExchangerComponent extends Component {
 
       cryptoExchanger: props.cryptoExchanger,
 
+      invalidExchangeModalVisible: false,
+
     }
 
     this.exchangeCurrency.bind(this);
@@ -490,6 +493,10 @@ export default class ExchangerComponent extends Component {
 
   getStyleSet() {
     return getAppStyleSet();
+  }
+
+  getExchangeMode() {
+    return this.state.exchangeMode;
   }
   
   getCoinExchangeMode () {
@@ -840,6 +847,10 @@ export default class ExchangerComponent extends Component {
     }
   }
 
+  setInvalidExchangeModalVisibility(inVisible) {
+    console.log("inVisible: " + inVisible);
+    this.setState({invalidExchangeModalVisible: inVisible});
+  }
 
   reinitalizeValues(inCryptoExchanger) {
     this.setState({
@@ -886,21 +897,47 @@ export default class ExchangerComponent extends Component {
     if(isNaN(inputValue))
       return;
 
-
     if(this.state.exchangeMode) {
-      this.state.cryptoExchanger.buyCrypto(inputValue, !this.state.coinExchangeMode);
+      if( !this.state.cryptoExchanger.buyCrypto(inputValue, !this.state.coinExchangeMode) )
+        this.showInvalidExchangeMessage(true);
     } else {
-      this.state.cryptoExchanger.sellCrypto(inputValue, !this.state.coinExchangeMode);
+      if( !this.state.cryptoExchanger.sellCrypto(inputValue, !this.state.coinExchangeMode) )
+        this.showInvalidExchangeMessage(false);
     }
+    
 
     this.updateInputText("");
 
     ExchangerComponent.forceUpdate();
   }
 
+  /** Shows the user a message telling them that their exchange is invalid because they do not
+   * have enough dollars or crypto to complete it.
+   *  - inBuy : If true, message is shown for a invalid buy, otherwise shown for an invalid sell **/
+  showInvalidExchangeMessage(inBuy) {
+    var exchangeMessage = "";
+    // Crypto is being bought and there is not enough dollars 
+    if(inBuy) 
+      exchangeMessage = "You do not have enough money to make this purchase.";
 
+    // Crypto is being sold and there is not enough crypto
+    else
+      exchangeMessage = "You do not have enough " + this.getCoinName() +  " make this sell";
+   
+    // Set the exchange message and show the message after it has been set
+    this.setState( {invalidExchangeMessage: exchangeMessage}, 
+                   () => this.setInvalidExchangeModalVisibility(true));
+  }
+
+  getInvalidExchangeModal() {
+    return (<InformationModal
+              visible={this.state.invalidExchangeModalVisible} 
+              setVisibility={(visibility) => this.setInvalidExchangeModalVisibility(visibility)}
+              messageString={this.state.invalidExchangeMessage} /> );
+  }
 
   render () {
+    console.log("DEBUG: state.cryptoExchanger at render: " + this.state.cryptoExchanger);
     if( this.state.cryptoExchanger == null || 
        !this.state.cryptoExchanger.isPriceLoaded() ||
        !this.state.cryptoExchanger.areValuesLoaded() ) {
@@ -941,6 +978,8 @@ export default class ExchangerComponent extends Component {
 
           </View>
           {this.getExchangeBox()}
+
+          { this.getInvalidExchangeModal() }
 
         </View>
       );

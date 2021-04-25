@@ -10,18 +10,16 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 
-import { SearchBar } from 'react-native-elements';
-
 import { Entypo } from '@expo/vector-icons';
+import { AdMobBanner } from 'expo-ads-admob';
+
+import { SearchBar } from 'react-native-elements';
 
 import ExchangerScreen from "./ExchangerScreen.js";
 import CryptoExchanger from "./CryptoExchanger.js";
 import Profile from "./Profile.js";
 import { getAppStyleSet } from "./App.js";
-
 import { ConfirmationModal } from "./MiscComponents.js";
-
-
 
 const styles = StyleSheet.create({
   screenContainer: {
@@ -348,6 +346,10 @@ export default class CoinSearchScreen extends Component {
 
     return (
       <View style={ styles.screenContainer }>
+        
+        <AdMobBanner
+          bannerSize="smartBannerPortrait"
+          adUnitID="ca-app-pub-3940256099942544/6300978111" />
 
         <ScrollView style={ [styles.scrollBoxContainer, styles.screenRow] }>
           { this.state.searchResults.map((cryptoObj, i) => this.getCryptoListBox(cryptoObj, i))}

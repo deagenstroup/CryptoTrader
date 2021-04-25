@@ -25,6 +25,7 @@ const styles = StyleSheet.create({
       flexDirection: 'column',
       justifyContent: 'center',
       alignItems: 'center',
+      width: '90%',
 
       backgroundColor: 'white',
       borderRadius: 10,
@@ -188,6 +189,49 @@ export const NumberInputModal = (props) => {
         </View>
       </View>
     </Modal> 
+  );
+}
+
+
+/** A popup Modal that displays a simple message to the user. 
+    required props:
+      visible: Value which determines the visibility of the Modal (boolean)
+      setVisibility: Function which sets the visibility of the Modal (boolean)
+      messageString: String which is shown in the popup to the user.
+ **/
+export const InformationModal = (props) => {
+  return (
+    <Modal
+      transparent={true}
+      onRequestClose={() => {
+       props.setVisibility(false);
+      }} { ...props }>
+
+        <View style={styles.centeredContainer}>
+
+          <View style={ styles.dialogContainer } >
+
+            <View style={ styles.dialogRow }>
+              <Text style={ styles.dialogText }>{props.messageString}</Text>
+            </View>
+            
+            <View style={ styles.dialogRow }>
+              <TouchableOpacity
+                style={ [styles.dialogButton, {width:100}] }
+                onPress={() => {
+                  props.setVisibility(false);
+                }} >
+                <View style={styles.dialogTextContainer}>
+                  <Text style={styles.dialogText}>OK</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+          </View>
+
+        </View>
+
+    </Modal>
   );
 }
 

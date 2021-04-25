@@ -1,5 +1,6 @@
 import * as FileSystem from 'expo-file-system';
 
+import { fileDir, getFileURI } from "./App.js";
 import Profile from "./Profile.js";
 import ExchangerScreen from "./ExchangerScreen.js"
 // import ExchangerComponent from './Exchanger.js';
@@ -18,10 +19,10 @@ export default class CryptoExchanger {
 
   /* The amount of dollars the user has, which is the same across all exchanger
      components */
-  static dollars = 100.0;
+  static dollars = -1;
 
   /* The amount of dollars that the user initiallity started with. */
-  static startingDollars = 100;
+  static startingDollars = 0;
 
   /** Contains the objects for each cryptocurrency which are loaded in at the
       apps launch and handle all of the logic operations of exchanging the currency **/
@@ -46,7 +47,14 @@ export default class CryptoExchanger {
   static getStartingDollars() {
     return CryptoExchanger.startingDollars;
   } 
-
+  
+  static didDollarVolumesLoad() {
+    if(CryptoExchanger.dollars != -1)
+      return true;
+    else
+      return false;
+  }
+  
   static getAreCryptosLoaded() {
     return CryptoExchanger.areCryptosLoaded;
   }
@@ -159,6 +167,13 @@ export default class CryptoExchanger {
   }
 
 
+  static initializeDollars(inDollars) {
+    CryptoExchanger.dollars = inDollars;
+    CryptoExchanger.startingDollars = inDollars;
+    CryptoExchanger.saveDollarsToFile(inDollars);
+    CryptoExchanger.saveDollarVolumes();
+  }
+
   static setDollars(inDollars) {
     CryptoExchanger.dollars = inDollars;
     CryptoExchanger.saveDollarsToFile(inDollars);
@@ -212,7 +227,7 @@ export default class CryptoExchanger {
       removedExchanger[0].reset();
     }
     CryptoExchanger.resetCryptoList()
-      .then(CryptoExchanger.loadCryptoExchangers().then(() => {
+      .then(CryptoExchanger.loadCryptoExchangerData().then(() => {
         console.log("forcing update after load");
         Profile.forceProfileUpdate();
         ExchangerScreen.forceUpdate();
@@ -222,53 +237,119 @@ export default class CryptoExchanger {
     // ExchangerComponent.forceUpdate();
   }
 
+  static async checkIfFileDirExists() {
+    var retObj = await FileSystem.getInfoAsync(fileDir);
+    if(retObj.exists && retObj.isDirectory)
+      return true;
+    else
+      return false;
+  }  
 
-  static async loadCryptoExchangers() {
+  // Adds and initializes a default amount of cryptocurrencies to the portfolio
+  static initializeDefaultPortfolio() {
+    // Add default crypto objects to crypto array  
+    CryptoExchanger.cryptoExchangerArray.push(new CryptoExchanger("bitcoin", "Bitcoin", false));
+    CryptoExchanger.cryptoExchangerArray.push(new CryptoExchanger("ethereum", "Ethereum", false));
+    CryptoExchanger.cryptoExchangerArray.push(new CryptoExchanger("litecoin", "Litecoin", false));
+    CryptoExchanger.cryptoExchangerArray.push(new CryptoExchanger("monero", "Monero", false));
+    CryptoExchanger.cryptoExchangerArrayLength = 4;
+    CryptoExchanger.areCryptosLoaded = true; 
+  }
+
+  /** Loads in all of the cryptocurrency exchanger objects, user cash, and stats from file and
+   *  applys default values if the objects and values cannot be read **/
+  static async loadCryptoExchangerData() {
     if(CryptoExchanger.areCryptosLoaded)
       return;
 
-    console.log("loadcryptoExchangerscalled");
+    // If the portfolio directory does not exist, then the application is being run for the
+    // first time and must be initialized
+    /*if(!CryptoExchanger.checkIfFileDirExists()) {
+      console.log("DEBUG: Portfolio directory does not exist...");
+      CryptoExchanger.initalizeDefaultPortfolio();
+      await CryptoExchanger.saveCryptoExchangers();
+      return;
+    } else {
+      console.log("DEBUG: Portfolio directory does exist...");
+    }*/ 
+    
+    if(false) {
+      await FileSystem.deleteAsync(
+        fileDir + "cryptolist.txt",
+        { idempotent: true }
+      );
+      await FileSystem.deleteAsync(
+        fileDir + "dollars.txt",
+        { idempotent: true }
+      );
+    }  
 
     var cryptoList;
     try {
       cryptoList = await CryptoExchanger.getCryptoListFromFile();
-    } catch(error) {
-      console.log("there was an error loading the cryptolis");
-      console.log(error);
-      cryptoList = [ "bitcoin", "ethereum", "litecoin", "monero" ];
-    }
-    for(var i = 0; i < cryptoList.length; i++) {
-      CryptoExchanger.cryptoExchangerArray.push(new CryptoExchanger(cryptoList[i], null, true));
-      CryptoExchanger.cryptoExchangerArrayLength = CryptoExchanger.cryptoExchangerArrayLength + 1;
-    }
-    console.log("cryptoList: " + cryptoList);
-    
-    try {
-      for(var i = 0; i < CryptoExchanger.cryptoExchangerArray.length; i++) {
+      console.log("DEBUG: crypto list loaded from file: " + cryptoList);
+      for(var i = 0; i < cryptoList.length; i++) {
+        CryptoExchanger.cryptoExchangerArray.push(new CryptoExchanger(cryptoList[i], null, true));
+        CryptoExchanger.cryptoExchangerArrayLength = CryptoExchanger.cryptoExchangerArrayLength + 1;
         await CryptoExchanger.cryptoExchangerArray[i].loadValuesFromFile();
+      }
+    } catch(error) {
+      console.log("ERROR: cryptolist cannot be read");
+      //console.log(error);
+      this.initializeDefaultPortfolio();
+      await CryptoExchanger.saveCryptoExchangers();
+    }
+   
+    // fetch the price of all of the currencies in the portfolio
+    try {
+      console.log("DEBUG: fetching crypto prices for each crypto exchanger object");
+      for(var i = 0; i < CryptoExchanger.cryptoExchangerArray.length; i++) {
         await CryptoExchanger.cryptoExchangerArray[i].fetchCoinPrice();
-        console.log(CryptoExchanger.cryptoExchangerArray[i]);
+        //console.log(CryptoExchanger.cryptoExchangerArray[i]);
       }
     } catch(error) {
       console.log(error);
     }
 
     try {
-      await CryptoExchanger.loadDollarVolumes();
-      console.log("removedDollarSoldVolume: " + CryptoExchanger.removedDollarSoldVolume + ", removedDollarBoughtVolume" + CryptoExchanger.removedDollarBoughtVolume);
+      await CryptoExchanger.loadDollarsFromFile();
     } catch(error) {
-      console.log("Error loading removed dollar volumes...");
+      console.log("ERROR: cannot load dollars from file");
+    }  
+
+    // load the amount of cash the user has and buying stats for cryptocurrencies
+    // that have been removed from the portfolio
+    try {
+      await CryptoExchanger.loadDollarVolumes();
+    } catch(error) {
+      console.log("ERROR: cannot load dollar volumes");
+      console.log(error);
     }
-    console.log("lasjdf;lkjsad;lkfja;lskjf;laskjdf;lkajsdf");
 
     CryptoExchanger.areCryptosLoaded = true;
   }
 
-  static async loadDollarVolumes() {
-    let fileObj = JSON.parse(await FileSystem.readAsStringAsync(
-      FileSystem.documentDirectory + "dollarvolumes.txt",
+  static async loadDollarsFromFile() {
+    let fileString = await FileSystem.readAsStringAsync(
+      fileDir + "dollars.txt",
       { encoding: FileSystem.EncodingType.UTF8 }
-    ));
+    );
+
+    var fileObj = JSON.parse(fileString);
+    CryptoExchanger.dollars = fileObj.fileDollars;
+  }
+
+  static async loadDollarVolumes() {
+    var fileObj;
+    try {
+      fileObj = JSON.parse(await FileSystem.readAsStringAsync(
+        fileDir + "dollarvolumes.txt",
+        { encoding: FileSystem.EncodingType.UTF8 }
+      ));
+    } catch(error) {
+      console.log("There was an error reading dollar volumes");
+      return;
+    }
     if(fileObj == null)
       return;
     if(fileObj.removedDollarBoughtVolume != null)
@@ -279,30 +360,57 @@ export default class CryptoExchanger {
       CryptoExchanger.startingDollars = fileObj.startingDollars;
   }
 
+  /** Saves the data for all the cryptocurrencies in the portfolio to file and
+   *  saves a list of all of the cryptocurrencies in the portfolio to file **/
   static async saveCryptoExchangers() {
-    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
+    for(var i = 0; i < CryptoExchanger.cryptoExchangerArray.length; i++) {
       await CryptoExchanger.cryptoExchangerArray[i].saveValuesToFile();
     }
     await CryptoExchanger.saveCryptoList();
   }
 
   static async saveCryptoList() {
+    console.log("DEBUG: saving crypto list");
     await FileSystem.deleteAsync(
-      FileSystem.documentDirectory + "cryptolist.txt",
+      fileDir + "cryptolist.txt",
       { idempotent: true }
     );
     var nameArray = [];
-    for(var i = 0; i < CryptoExchanger.cryptoExchangerArrayLength; i++) {
+    for(var i = 0; i < CryptoExchanger.cryptoExchangerArray.length; i++) {
       nameArray.push(CryptoExchanger.cryptoExchangerArray[i].getCoinID());
     }
+  
+
+    //var saveURI = FileSystem.documentDirectory + "cryptolist.txt";
+    var saveURI = fileDir + "cryptolist.txt";
+    try { 
+      await FileSystem.writeAsStringAsync(
+        saveURI,
+        JSON.stringify(nameArray),
+        { encoding: FileSystem.EncodingType.UTF8 }
+      );
+      console.log("DEBUG: crypto list saved to file: " + JSON.stringify(nameArray));
+    } catch(error) {
+      console.log("ERROR: cannot save crypto list: " + JSON.stringify(nameArray)
+                + "to file " + saveURI);
+      console.log(error);
+    }
+  }
+
+  static async saveDollarsToFile(dollarAmount) {
+    var fileObj = {
+      fileDollars: dollarAmount,
+    }
+
     await FileSystem.writeAsStringAsync(
-      FileSystem.documentDirectory + "cryptolist.txt",
-      JSON.stringify(nameArray),
+      fileDir + "dollars.txt",
+      JSON.stringify(fileObj),
       { encoding: FileSystem.EncodingType.UTF8 }
     );
   }
 
   static async saveDollarVolumes() {
+    console.log("DEBUG: saving dollar volumes");
     var fileObj = {
       removedDollarBoughtVolume: this.removedDollarBoughtVolume,
       removedDollarSoldVolume: this.removedDollarSoldVolume,
@@ -310,7 +418,7 @@ export default class CryptoExchanger {
     }
 
     await FileSystem.writeAsStringAsync(
-      FileSystem.documentDirectory + "dollarvolumes.txt",
+      fileDir + "dollarvolumes.txt",
       JSON.stringify(fileObj),
       { encoding: FileSystem.EncodingType.UTF8 }
     );
@@ -321,7 +429,7 @@ export default class CryptoExchanger {
   static async resetCryptoList() {
     try {
       await FileSystem.deleteAsync(
-      FileSystem.documentDirectory + "cryptolist.txt",
+      fileDir + "cryptolist.txt",
       { idempotent: true }
     );
     } catch(error) {
@@ -331,7 +439,7 @@ export default class CryptoExchanger {
     console.log("resetCryptoList called");
     try {
       await FileSystem.writeAsStringAsync(
-      FileSystem.documentDirectory + "cryptolist.txt",
+      fileDir + "cryptolist.txt",
       JSON.stringify(nameArray),
       { encoding: FileSystem.EncodingType.UTF8 }
     );
@@ -345,7 +453,7 @@ export default class CryptoExchanger {
       the user has in their porfolio **/
   static async getCryptoListFromFile() {
     let fileString = await FileSystem.readAsStringAsync(
-      FileSystem.documentDirectory + "cryptolist.txt",
+      fileDir + "cryptolist.txt",
       { encoding: FileSystem.EncodingType.UTF8 }
     );
     var cryptoList = JSON.parse(fileString);
@@ -467,7 +575,7 @@ export default class CryptoExchanger {
   }
 
   /** Buy inAmount of crypto or the equivalent amount of dollars worth of crypto
-      if inDollarsWorth is true **/
+      if inDollarsWorth is true, returns true if successful and false otherwise **/
   buyCrypto(inAmount, inDollarsWorth) {
     var newCoinAmount = this.coin;
     var newDollarAmount = CryptoExchanger.dollars;
@@ -485,8 +593,9 @@ export default class CryptoExchanger {
       newDollarAmount -= this.getDollarExchangeValue(inAmount);
     }
 
-    if(newCoinAmount < 0 || newDollarAmount < 0)
-      return;
+    if(newCoinAmount < 0 || newDollarAmount < 0) {
+      return false;
+    }
 
     this.coin = newCoinAmount;
     CryptoExchanger.dollars = newDollarAmount;
@@ -504,6 +613,7 @@ export default class CryptoExchanger {
       .finally(() => console.log("Values saved successfully."));
 
     Profile.forceProfileUpdate();
+    return true;
   }
 
   sellCrypto(inAmount, inDollarsWorth) {
@@ -523,8 +633,9 @@ export default class CryptoExchanger {
       newDollarAmount += this.getDollarExchangeValue(inAmount);
     }
 
-    if(newCoinAmount < 0 || newDollarAmount < 0)
-      return;
+    if(newCoinAmount < 0 || newDollarAmount < 0) {
+      return false;
+    }  
 
     this.coin = newCoinAmount;
     CryptoExchanger.dollars = newDollarAmount;
@@ -542,6 +653,8 @@ export default class CryptoExchanger {
       .finally(() => console.log("Values saved successfully."));
 
     Profile.forceProfileUpdate();
+
+    return true;
   }
 
   reset() {
@@ -556,8 +669,6 @@ export default class CryptoExchanger {
 
   // Loads the amount of dollars and coins from the last time it was saved
   async loadValuesFromFile() {
-    await CryptoExchanger.loadDollarsFromFile()
-      .catch((error) => {CryptoExchanger.dollars = 0;});
     await this.loadCoinsFromFile()
       .catch((error) => console.log("Error loading coin values from file..."))
       .finally(() => {
@@ -571,18 +682,6 @@ export default class CryptoExchanger {
     this.saveCoinsToFile();
   }
 
-  static async saveDollarsToFile(dollarAmount) {
-    var fileObj = {
-      fileDollars: dollarAmount,
-    }
-
-    await FileSystem.writeAsStringAsync(
-      FileSystem.documentDirectory + "new_dollars.txt",
-      JSON.stringify(fileObj),
-      { encoding: FileSystem.EncodingType.UTF8 }
-    );
-  }
-
   async saveCoinsToFile() {
     var fileObj = {
       // coinName: this.getCoinID().substring(0, 1).toUpperCase() + this.getCoinID().substring(1, this.getCoinID().length),
@@ -593,25 +692,15 @@ export default class CryptoExchanger {
     };
 
     await FileSystem.writeAsStringAsync(
-      FileSystem.documentDirectory + this.getCoinFilename(),
+      fileDir + this.getCoinFilename(),
       JSON.stringify(fileObj),
       { encoding: FileSystem.EncodingType.UTF8 }
     );
   }
 
-  static async loadDollarsFromFile() {
-    let fileString = await FileSystem.readAsStringAsync(
-      FileSystem.documentDirectory + "new_dollars.txt",
-      { encoding: FileSystem.EncodingType.UTF8 }
-    );
-
-    var fileObj = JSON.parse(fileString);
-    CryptoExchanger.dollars = fileObj.fileDollars;
-  }
-
   async loadCoinsFromFile() {
     let fileString = await FileSystem.readAsStringAsync(
-      FileSystem.documentDirectory + this.getCoinFilename(),
+      fileDir + this.getCoinFilename(),
       { encoding: FileSystem.EncodingType.UTF8 }
     );
 

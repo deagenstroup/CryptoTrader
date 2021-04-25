@@ -4,6 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import * as Font from 'expo-font';
 import { useFonts } from 'expo-font';
 import { Ionicons, Feather, Foundation } from '@expo/vector-icons';
+import { AdMobBanner } from "expo-ads-admob";
+import * as FileSystem from 'expo-file-system';
 
 /* components imported from React */
 import React, { useState, useContext } from 'react';
@@ -34,7 +36,13 @@ import {
   NumberInputModal 
 } from "./MiscComponents.js";
 
+// Supresses cycle warnings
 LogBox.ignoreAllLogs()
+
+export var fileDir = FileSystem.documentDirectory;// + "portfolio1\/";
+export function getFileURI(filename) {
+  return FileSystem.documentDirectory + "portfolio1\/" + filename;
+}
 
 
 const menuFontFamily = "Aldrich"
@@ -220,18 +228,25 @@ const CustomDrawerContent = (props) => {
         onConfirmation={() => {
           setInputDialogVisibility(true);
         }}/>
+  
 
+      {/* The dialog that appears when the user would like to reset their profile
+          and needs to specify how much cash they start with */}
       <NumberInputModal
         visible={inputDialogVisibility}
         setVisibility={(visibility) => setInputDialogVisibility(visibility)}
         promptString="Input starting cash:"
         onConfirmation={(inputNum) => {
+          // reseting the objects which contain all saved data
           CryptoExchanger.resetCryptoExchangers(inputNum);
           Profile.resetProfile();
+
+          // rerendering all the screens to reflect data reset
           ExchangerComponent.forceUpdate();
           Profile.forceProfileUpdate();
           CoinSearchScreen.forceUpdate(); 
         }}/> 
+
     </DrawerContentScrollView>
   );
 }
@@ -340,15 +355,24 @@ export default function App() {
 
   const [currStyleSet, setCurrStyleSet] = useState(lightStyles); 
 
+  // Variable which specifies if the CryptoExchanger objects have been loaded from file
   const [cryptoLoaded, setCryptoLoaded] = useState(false);
-  const [cryptoPriceLoaded, setCryptoPriceLoaded] = useState(false);
-  const [loadThreadStarted, setLoadThreadStarted] = useState(false);
 
+  // Variable which specifies if the thread which loads the CryptoExchanger objects from file
+  // has been started
+  const [loadThreadStarted, setLoadThreadStarted] = useState(false);
+  const [initialCashDialogVisibility, setInitialCashDialogVisibility] = useState(false);
+  //const [cryptoPriceLoaded, setCryptoPriceLoaded] = useState(false);
+
+  // Start the thread which loads the CryptoExchangers from file
+  // if the thread has not already been started
   if(!loadThreadStarted) {
     setLoadThreadStarted(true);
-    CryptoExchanger.loadCryptoExchangers()
-      .catch((error) => console.log("There was an error loading crypto exchangers..."))
+    CryptoExchanger.loadCryptoExchangerData()
+      .catch((error) => console.log("ERROR: cannot load crypto exchanger objects"))
       .then(() => {
+        if(!CryptoExchanger.didDollarVolumesLoad())
+          setInitialCashDialogVisibility(true);
         setCryptoLoaded(true);
       });
   }
@@ -364,10 +388,27 @@ export default function App() {
           setCurrStyleSet(lightStyles);
         toggleTheme();
       }}}>
+
         <NavigationContainer
           style={currStyleSet.backgroundColor}>
           <NavDrawer />
         </NavigationContainer>
+
+        {/* The dialog that appears when the user first starts the app and 
+            needs to specify how much cash they start with */}
+        <NumberInputModal
+          visible={initialCashDialogVisibility}
+          setVisibility={(visibility) => setInitialCashDialogVisibility(visibility)}
+          promptString="How much cash would you like to start with?"
+          onConfirmation={(inputNum) => {
+            CryptoExchanger.initializeDollars(inputNum); 
+
+            // rerendering all the screens to reflect data reset
+            ExchangerComponent.forceUpdate();
+            Profile.forceProfileUpdate();
+            CoinSearchScreen.forceUpdate(); 
+          }}/> 
+
       </ThemeContext.Provider>
     );
   }

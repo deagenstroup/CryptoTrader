@@ -13,6 +13,8 @@ import {
   Picker,
 } from 'react-native';
 
+import { AdMobBanner } from "expo-ads-admob";
+
 import AppLoading from 'expo-app-loading';
 
 // import { Picker } from '@react-native-picker/picker';
@@ -22,7 +24,18 @@ import CryptoExchanger from "./CryptoExchanger.js";
 import  ExchangerComponent from './Exchanger.js';
 import Profile from './Profile.js';
 import { getAppStyleSet } from "./App.js";
+import { InformationModal } from "./MiscComponents.js";
+
 const styles = StyleSheet.create({
+  screenContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    width: Dimensions.get('window').width,
+    // borderColor: 'green',
+    // borderWidth: 2,
+  },
+
   largeColumnBox: {
     flex: 0,
     flexDirection: 'column',
@@ -221,6 +234,11 @@ export default class ExchangerScreen extends Component {
       ExchangerScreen.exchangerScreen.resetChosenCrypto();
   }
 
+  static showInvalidExchangeModal() {
+    if(ExchangerScreen.exchangerScreen != null)
+      ExchangerScreen.exchangerScreen.setInvalidExchangeModal(true);
+  }
+
   constructor(props) {
     super(props);
 
@@ -338,10 +356,7 @@ export default class ExchangerScreen extends Component {
             );
   }
 
-
-
   render() {
-
     
     if(this.state.chosenCryptoName == null ||
        CryptoExchanger.getCryptoExchangerByName(this.state.chosenCryptoName) == null
@@ -350,26 +365,32 @@ export default class ExchangerScreen extends Component {
     }
 
     return (
-      <KeyboardAwareScrollView
-        contentContainerStyle={ [styles.largeColumnBox, this.getStyleSet().backgroundColor] }
-        extraHeight={50}>
-        
-        {/* Coin picker and Graph time picker buttons at top of screen */}
-        <View style={[styles.wideRowBox, this.getStyleSet().backgroundColor]}>
-          { this.getCoinPickerButton() }
-          { this.getGraphPickerButton() }
-        </View>
-        
-        <ExchangerComponent 
-          cryptoExchanger={
-            CryptoExchanger.getCryptoExchangerByName(this.state.chosenCryptoName)
-          }/>
 
-        { this.getCoinPickerModal() }
+        <KeyboardAwareScrollView
+          contentContainerStyle={ [styles.largeColumnBox, this.getStyleSet().backgroundColor] }
+          extraHeight={50}>
+          
+          <AdMobBanner
+            bannerSize="smartBannerPortrait"
+            adUnitID="ca-app-pub-3940256099942544/6300978111" />
+          
+          {/* Coin picker and Graph time picker buttons at top of screen */}
+          <View style={[styles.wideRowBox, this.getStyleSet().backgroundColor]}>
+            { this.getCoinPickerButton() }
+            { this.getGraphPickerButton() }
+          </View>
+          
+          <ExchangerComponent 
+            cryptoExchanger={
+              CryptoExchanger.getCryptoExchangerByName(this.state.chosenCryptoName)
+            }/>
 
-        { this.getGraphPickerModal() }
+          { this.getCoinPickerModal() }
 
-      </KeyboardAwareScrollView>
+          { this.getGraphPickerModal() }
+
+        </KeyboardAwareScrollView>
+
     );
   }
 }

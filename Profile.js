@@ -11,9 +11,11 @@ import {
   Button,
 } from 'react-native';
 
+/* Components and resources imported from expo packages */
 import AppLoading from 'expo-app-loading';
 import * as FileSystem from 'expo-file-system';
 import { Feather, MaterialIcons, Foundation } from '@expo/vector-icons';
+import { AdMobBanner } from 'expo-ads-admob';
 
 import { PieChart } from 'react-native-chart-kit';
 
@@ -31,20 +33,23 @@ function round(value, decimals) {
 }
 
 const styles = StyleSheet.create({
-
+  
+  // container which holds everything on the screen, except the header
   screenContainer: {
     flex: 1,
     flexDirection: 'column',
-    //justifyContent: '',
-    //alignItems: 'center',
-
-    //backgroundColor: 'black',//getAppStyleSet().backgroundColor.backgroundColor,
-
-    // borderWidth: 2,
-    // borderColor: 'blue',
   },
 
-  screenContainerContent: {
+  // container which holds all of the profile components below the ad banner
+  scrollViewContainer: {
+    flex: 1,
+    width: '100%',
+    flexDirection: 'column',
+  },
+  
+  // style for the scroll view container for all props which affect the 
+  // content of the container and not the container itself
+  scrollViewContainerContent: {
     justifyContent: 'flex-start',
     alignItems: 'center',
   },
@@ -58,7 +63,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Aldrich',
     fontSize: 22,
   },
-
+  
+  // container for all of the stats text components
   statsContainer: {
     flex: 0,
     flexDirection: 'column',
@@ -71,8 +77,6 @@ const styles = StyleSheet.create({
 
     borderWidth: 2,
     borderRadius: 6,
-    //borderColor: 'black',
-
   },
 
   statsRow: {
@@ -495,67 +499,73 @@ export default class Profile extends Component {
     } else {
 
       return (
+        <View style={ [styles.screenContainer, {alignItems: "center"}] }>
+          <AdMobBanner
+            bannerSize="smartBannerPortrait"
+            adUnitID="ca-app-pub-3940256099942544/6300978111" />
+           
+           {/* Container for all the content of the Profile screen */}
+           <ScrollView
+            style={ [styles.scrollViewContainer, getAppStyleSet().backgroundColor] }
+            contentContainerStyle={ styles.scrollViewContainerContent }>
 
-       <ScrollView
-        style={ [styles.screenContainer, getAppStyleSet().backgroundColor] }
-        contentContainerStyle={ styles.screenContainerContent }>
+              { this.getPieChart() }
 
-          { this.getPieChart() }
+              {/* The stats container  */}
+              <View style={ [styles.statsContainer, styles.subcontainerSpacer, getAppStyleSet().borderColor] } >
 
-          {/* The stats container  */}
-          <View style={ [styles.statsContainer, styles.subcontainerSpacer, getAppStyleSet().borderColor] } >
+                {/* Net profit row */}
+                <View style={ styles.statsRow }>
+                  <View style={ styles.statsContainerLeft }>
+                    <Text style={ [styles.statsTextLabel, getAppStyleSet().primColor] } >net profit</Text>
+                  </View>
+                  <View style={ styles.statsContainerRight }>
+                    <Text style={ 
+                      [styles.statsText, this.getProfitColor(parseFloat(CryptoExchanger.getTotalProfit()).toFixed(2), false)] 
+                    }>{this.getCryptoListTagProfitText(CryptoExchanger.getTotalProfit())}</Text>
+                  </View>
+                </View>
+               
+                {/* Collection of rows with individual profits for each cryptocurrency */}
+                { this.getCryptoListTags(true) }
+                
+                {/* Net worth row */}
+                <View style={ styles.statsRow }>
+                  <View style={ styles.statsContainerLeft }><Text style={ [styles.statsTextLabel, getAppStyleSet().primColor] } >net worth</Text></View>
+                  <View style={ styles.statsContainerRight }><Text style={ [styles.statsText, getAppStyleSet().primColor] } >${round(CryptoExchanger.getTotalCurrentNetValue(), 2)}</Text></View>
+                </View>
+                
+                {/* Dollar portion of net worth breakdown */} 
+                <View style={ styles.statsRow }>
+                  <View style={ styles.statsContainerLeft }><Text style={ [styles.statsTextLabel, styles.statsSubtext] }>dollars</Text></View>
+                  <View style={ styles.statsContainerRight }><Text style={ [styles.statsText, styles.statsSubtext] } >${round(CryptoExchanger.getDollars(), 2)}</Text></View>
+                </View>
+                
+                {/* Collection of rows with individual net worths for each cryptocurrency */}
+                { this.getCryptoListTags(false) }
 
-            {/* Net profit row */}
-            <View style={ styles.statsRow }>
-              <View style={ styles.statsContainerLeft }>
-                <Text style={ [styles.statsTextLabel, getAppStyleSet().primColor] } >net profit</Text>
+                {/* Date started row */}
+                <View style={ styles.statsRow }>
+                  <View style={ styles.statsContainerLeft }><Text style={ [styles.statsTextLabel, getAppStyleSet().primColor] } >date started</Text></View>
+                  <View style={ styles.statsContainerRight }><Text style={ [styles.statsText, getAppStyleSet().primColor] } >{this.getDateCreatedString()}</Text></View>
+                </View>
+
+                {/* Profile age row */}
+                <View style={ styles.statsRow }>
+                  <View style={ styles.statsContainerLeft }><Text style={ [styles.statsTextLabel, getAppStyleSet().primColor] } >profile age</Text></View>
+                  <View style={ styles.statsContainerRight }><Text style={ [styles.statsText, getAppStyleSet().primColor] } >{this.getProfileAge()} days</Text></View>
+                </View>
+
+                {/* Starting cash row */}
+                <View style={ styles.statsRow }>
+                  <View style={ styles.statsContainerLeft }><Text style={ [styles.statsTextLabel, getAppStyleSet().primColor] } >starting cash</Text></View>
+                  <View style={ styles.statsContainerRight }><Text style={ [styles.statsText, getAppStyleSet().primColor] } >${CryptoExchanger.getStartingDollars()}</Text></View>
+                </View>
+
               </View>
-              <View style={ styles.statsContainerRight }>
-                <Text style={ 
-                  [styles.statsText, this.getProfitColor(parseFloat(CryptoExchanger.getTotalProfit()).toFixed(2), false)] 
-                }>{this.getCryptoListTagProfitText(CryptoExchanger.getTotalProfit())}</Text>
-              </View>
-            </View>
-            
-            {/* Collection of rows with individual profits for each cryptocurrency */}
-            { this.getCryptoListTags(true) }
-            
-            {/* Net worth row */}
-            <View style={ styles.statsRow }>
-              <View style={ styles.statsContainerLeft }><Text style={ [styles.statsTextLabel, getAppStyleSet().primColor] } >net worth</Text></View>
-              <View style={ styles.statsContainerRight }><Text style={ [styles.statsText, getAppStyleSet().primColor] } >${round(CryptoExchanger.getTotalCurrentNetValue(), 2)}</Text></View>
-            </View>
-            
-            {/* Dollar portion of net worth breakdown */} 
-            <View style={ styles.statsRow }>
-              <View style={ styles.statsContainerLeft }><Text style={ [styles.statsTextLabel, styles.statsSubtext] }>dollars</Text></View>
-              <View style={ styles.statsContainerRight }><Text style={ [styles.statsText, styles.statsSubtext] } >${round(CryptoExchanger.getDollars(), 2)}</Text></View>
-            </View>
-            
-            {/* Collection of rows with individual net worths for each cryptocurrency */}
-            { this.getCryptoListTags(false) }
 
-            {/* Date started row */}
-            <View style={ styles.statsRow }>
-              <View style={ styles.statsContainerLeft }><Text style={ [styles.statsTextLabel, getAppStyleSet().primColor] } >date started</Text></View>
-              <View style={ styles.statsContainerRight }><Text style={ [styles.statsText, getAppStyleSet().primColor] } >{this.getDateCreatedString()}</Text></View>
-            </View>
-
-            {/* Profile age row */}
-            <View style={ styles.statsRow }>
-              <View style={ styles.statsContainerLeft }><Text style={ [styles.statsTextLabel, getAppStyleSet().primColor] } >profile age</Text></View>
-              <View style={ styles.statsContainerRight }><Text style={ [styles.statsText, getAppStyleSet().primColor] } >{this.getProfileAge()} days</Text></View>
-            </View>
-
-            {/* Starting cash row */}
-            <View style={ styles.statsRow }>
-              <View style={ styles.statsContainerLeft }><Text style={ [styles.statsTextLabel, getAppStyleSet().primColor] } >starting cash</Text></View>
-              <View style={ styles.statsContainerRight }><Text style={ [styles.statsText, getAppStyleSet().primColor] } >${CryptoExchanger.getStartingDollars()}</Text></View>
-            </View>
-
-</View>
-
-        </ScrollView>
+            </ScrollView>
+          </View>
       );
     }
   }
