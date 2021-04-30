@@ -401,7 +401,7 @@ export default class ExchangerComponent extends Component {
     } else if(ExchangerComponent.graphTimeframe === "24h") {
       url = url + "&days=1&interval=hourly";
     } else if(ExchangerComponent.graphTimeframe === "1m") {
-      url = url + "&days=1&interval=hourly";
+      url = url + "&days=30&interval=daily";
     }
 
     fetch(url)
@@ -418,6 +418,7 @@ export default class ExchangerComponent extends Component {
       .catch((error) => console.error(error))
       .finally(() => {
         this.setState({isChartDataLoaded: true});
+        ExchangerComponent.exchanger.forceUpdate();
       });
   }
 
@@ -447,10 +448,19 @@ export default class ExchangerComponent extends Component {
     var chartDataArray = [ 1, 2, 3, 4, 5, 6, 7];//, 7, 8, 9, 10, 11, 12 ];
 
     var time = Date.now();
+    console.log("time: " + time);
     var j = chartDataArray.length - 1;
+    console.log("j: " + j);
+
+    // iterate through the prices array from the back (newest) to front (oldest)
+    // and save the prices at 4 hour intervals
     for(var i = json.prices.length - 1; i >= 0 && j >= 0; i--) {
       var jsonTime = json.prices[i][0];
-      if(jsonTime > (time - 360000*2) && jsonTime < (time + 360000*2)) {
+      console.log("jsonTime: " + jsonTime);
+      var lowerBoundTime = (time - 3600000*2); 
+      var upperBoundTime = (time + 3600000*2);
+      console.log("range: " + lowerBoundTime + " - " + upperBoundTime);
+      if(jsonTime >= lowerBoundTime && jsonTime < upperBoundTime) {
         chartDataArray[j] = json.prices[i][1];
         console.log("price at " + i + " : " + json.prices[i][1]);
         j--;

@@ -309,7 +309,10 @@ export default class Profile extends Component {
 
   componentDidMount() {
     this.loadValuesFromFile()
-        .catch((error) => console.log("Error loading profile from file."))
+        .catch((error) => { 
+          console.log("Error loading profile from file.");
+          this.setState({dateCreated: new Date(2000, 0, 0)});
+        })
         .finally(() => this.setState({isLoaded: true}));
   }
 
@@ -467,6 +470,7 @@ export default class Profile extends Component {
   async saveValuesToFile() {
     var fileObj = {
       fileDateString: this.getDateCreatedString(),
+      //fileDateString: new Date(2021, 2, 5),
     }
 
     await FileSystem.writeAsStringAsync(

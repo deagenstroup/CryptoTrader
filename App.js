@@ -187,7 +187,7 @@ const CustomDrawerContent = (props) => {
        
         {/* Flexbox which contains the title within the drawer */}
         <View style={styles.titleBoxContainer}>
-          <Text style={[styles.titleText, theme.styleSet.primColor]}>CryptoTrader</Text>
+          <Text style={[styles.titleText, theme.styleSet.primColor]}>CoinTrader</Text>
           <Text style={styles.titleSubText}>V1.0</Text>
         </View>
 
@@ -296,8 +296,8 @@ const NavDrawer = () => {
           name="profile-screen"
           component={Profile}
           options={{
-            drawerLabel: "Profile",
-            title: "Profile",
+            drawerLabel: "Portfolio",
+            title: "Portfolio",
           }}
           />
 
@@ -314,7 +314,7 @@ const NavDrawer = () => {
           name="coin-search-screen"
           component={CoinSearchScreen}
           options={{
-            drawerLabel: "Search",
+            drawerLabel: "Coin Search",
             headerTitle: () => {
               const [searchText, setSearchText] = useState();
               return (
