@@ -29,6 +29,7 @@ import Profile from "./Profile.js";
 import ExchangerScreen from "./ExchangerScreen.js";
 import ExchangerComponent from "./Exchanger.js";
 import CoinSearchScreen from "./CoinSearchScreen.js";
+import HelpScreen from "./HelpScreen.js";
 import { 
   lightStyles, 
   darkStyles,
@@ -330,6 +331,15 @@ const NavDrawer = () => {
                   value={searchText} />
               );
             },
+          }}
+          />
+
+        <Drawer.Screen
+          name="help-screen"
+          component={HelpScreen}
+          options={{
+            drawerLabel: "Help",
+            title: "Help",
           }}
           />
 
